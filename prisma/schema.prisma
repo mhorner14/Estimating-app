@@ -196,6 +196,7 @@ model Customer {
   zip            String?
   billingAddress String?
   leadSource     String?
+  tags           String[] @default([])
   notes          String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

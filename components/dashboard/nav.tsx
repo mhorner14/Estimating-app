@@ -17,6 +17,7 @@ import {
   BarChart3,
   Menu,
   X,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/estimates", label: "Estimates", icon: FileText },
   { href: "/customers", label: "Customers", icon: Users },
+  { href: "/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/services", label: "Services & Pricing", icon: Wrench },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },

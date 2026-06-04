@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, MapPin, Tag, Pencil, Loader2, Trash2 } from "lucide-react";
+import { Phone, Mail, MapPin, Tag, Pencil, Loader2, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Customer {
@@ -19,6 +19,7 @@ interface Customer {
   state?: string | null;
   zip?: string | null;
   leadSource?: string | null;
+  tags?: string[];
   notes?: string | null;
 }
 
@@ -29,10 +30,22 @@ export function CustomerContactCard({ customer: initial }: { customer: Customer 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [form, setForm] = useState({ ...initial });
+  const [form, setForm] = useState<Customer & { tags: string[] }>({ ...initial, tags: initial.tags ?? [] });
+  const [tagInput, setTagInput] = useState("");
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  }
+
+  function addTag(tag: string) {
+    const t = tag.trim().toLowerCase();
+    if (!t || form.tags.includes(t)) return;
+    setForm((f) => ({ ...f, tags: [...f.tags, t] }));
+    setTagInput("");
+  }
+
+  function removeTag(tag: string) {
+    setForm((f) => ({ ...f, tags: f.tags.filter((x) => x !== tag) }));
   }
 
   async function save() {
@@ -75,7 +88,7 @@ export function CustomerContactCard({ customer: initial }: { customer: Customer 
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-medium text-slate-600">Contact Info</CardTitle>
         {!editing && (
-          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setForm({ ...customer }); setEditing(true); }}>
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setForm({ ...customer, tags: customer.tags ?? [] }); setTagInput(""); setEditing(true); }}>
             <Pencil className="w-3 h-3 mr-1" /> Edit
           </Button>
         )}
@@ -118,6 +131,27 @@ export function CustomerContactCard({ customer: initial }: { customer: Customer 
               <Input name="leadSource" value={form.leadSource || ""} onChange={handleChange} placeholder="e.g. Google, Referral" className="mt-1 h-8 text-sm" />
             </div>
             <div>
+              <label className="text-xs text-slate-500 font-medium">Tags</label>
+              <div className="mt-1 flex flex-wrap gap-1.5 mb-1.5">
+                {form.tags.map((tag) => (
+                  <span key={tag} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                    {tag}
+                    <button onClick={() => removeTag(tag)} className="hover:text-blue-900"><X className="w-2.5 h-2.5" /></button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-1">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }}
+                  placeholder="Add tag, press Enter"
+                  className="h-8 text-sm"
+                />
+                <Button size="sm" variant="outline" onClick={() => addTag(tagInput)} className="h-8 text-xs">Add</Button>
+              </div>
+            </div>
+            <div>
               <label className="text-xs text-slate-500 font-medium">Notes</label>
               <Textarea name="notes" value={form.notes || ""} onChange={handleChange} rows={2} className="mt-1 text-sm" />
             </div>
@@ -154,6 +188,13 @@ export function CustomerContactCard({ customer: initial }: { customer: Customer 
             {customer.leadSource && (
               <div className="flex items-center gap-2 text-slate-700">
                 <Tag className="w-4 h-4 text-slate-400" /> {customer.leadSource}
+              </div>
+            )}
+            {customer.tags && customer.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {customer.tags.map((tag) => (
+                  <span key={tag} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">{tag}</span>
+                ))}
               </div>
             )}
             {customer.notes && (

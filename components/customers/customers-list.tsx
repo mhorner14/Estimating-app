@@ -15,6 +15,7 @@ interface Customer {
   email: string | null;
   projectAddress: string | null;
   leadSource: string | null;
+  tags: string[];
   createdAt: string;
   _count: { projects: number };
 }
@@ -25,8 +26,12 @@ interface Props {
 
 export function CustomersList({ customers }: Props) {
   const [search, setSearch] = useState("");
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+
+  const allTags = Array.from(new Set(customers.flatMap((c) => c.tags))).sort();
 
   const filtered = customers.filter((c) => {
+    if (activeTag && !c.tags.includes(activeTag)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -56,6 +61,24 @@ export function CustomersList({ customers }: Props) {
           </button>
         )}
       </div>
+
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                activeTag === tag
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-slate-500">
@@ -102,6 +125,13 @@ export function CustomersList({ customers }: Props) {
                     </div>
                   )}
                 </div>
+                {customer.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {customer.tags.map((tag) => (
+                      <span key={tag} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">{tag}</span>
+                    ))}
+                  </div>
+                )}
                 <p className="text-xs text-slate-400 mt-3">Added {formatDate(customer.createdAt)}</p>
               </CardContent>
             </Card>

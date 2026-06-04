@@ -23,6 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       state: body.state ?? existing.state,
       zip: body.zip ?? existing.zip,
       leadSource: body.leadSource ?? existing.leadSource,
+      tags: body.tags !== undefined ? body.tags : existing.tags,
       notes: body.notes ?? existing.notes,
     },
   });
