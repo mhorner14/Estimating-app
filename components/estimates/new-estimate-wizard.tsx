@@ -20,6 +20,8 @@ import {
   CheckCircle,
   User,
   PlusCircle,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import type { Customer, Service } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +57,41 @@ export function NewEstimateWizard({ customers, services, preselectedCustomerId }
   const [aiInput, setAiInput] = useState("");
   const [aiResult, setAiResult] = useState<AIResult | null>(null);
   const [clarificationAnswers, setClarificationAnswers] = useState<Record<string, string>>({});
+  const [isListening, setIsListening] = useState(false);
+
+  function toggleVoice() {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice input is not supported in this browser. Try Chrome.");
+      return;
+    }
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    let finalText = aiInput;
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onresult = (event: any) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += (finalText ? " " : "") + t;
+          setAiInput(finalText);
+        } else {
+          interim = t;
+        }
+      }
+      if (interim) setAiInput(finalText + (finalText ? " " : "") + interim);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.start();
+  }
 
   async function handleAiParse() {
     if (!aiInput.trim()) return;
@@ -280,7 +317,21 @@ export function NewEstimateWizard({ customers, services, preselectedCustomerId }
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="aiInput">Job Description</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="aiInput">Job Description</Label>
+                <button
+                  type="button"
+                  onClick={toggleVoice}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                    isListening
+                      ? "bg-red-50 border-red-300 text-red-600 animate-pulse"
+                      : "border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                  }`}
+                >
+                  {isListening ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                  {isListening ? "Stop" : "Voice Input"}
+                </button>
+              </div>
               <Textarea
                 id="aiInput"
                 placeholder="Describe the job here..."
@@ -288,6 +339,12 @@ export function NewEstimateWizard({ customers, services, preselectedCustomerId }
                 onChange={(e) => setAiInput(e.target.value)}
                 className="min-h-[150px] text-base"
               />
+              {isListening && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-red-500 rounded-full inline-block animate-pulse" />
+                  Listening... speak clearly
+                </p>
+              )}
             </div>
 
             <div className="flex gap-3">
