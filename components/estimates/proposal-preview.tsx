@@ -108,6 +108,22 @@ function EditableSection({
 export function ProposalPreview({ estimate: initialEstimate, onGenerate, generating }: ProposalPreviewProps) {
   const { toast } = useToast();
   const [estimate, setEstimate] = useState(initialEstimate);
+  const [improving, setImproving] = useState(false);
+
+  async function improveWithAI() {
+    setImproving(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/improve-proposal`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setEstimate((e: any) => ({ ...e, ...data }));
+      toast({ title: "Proposal improved!", description: `${data.improvements?.length || 0} improvements applied.` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setImproving(false);
+    }
+  }
 
   const handleSave = useCallback(async (key: EditableKey, value: string) => {
     try {
@@ -152,7 +168,13 @@ export function ProposalPreview({ estimate: initialEstimate, onGenerate, generat
 
   return (
     <div className="max-w-3xl mx-auto">
-      <p className="text-xs text-slate-400 text-center mb-3">Hover over any section to edit it inline</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-slate-400">Hover over any section to edit it inline</p>
+        <Button size="sm" variant="outline" onClick={improveWithAI} disabled={improving} className="text-xs h-7">
+          {improving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1" />}
+          Improve with AI
+        </Button>
+      </div>
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         {/* Header */}
         <div className="bg-slate-900 text-white p-8">
