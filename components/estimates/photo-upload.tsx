@@ -20,6 +20,11 @@ interface PhotoUploadProps {
   onUpdate: (photos: Photo[]) => void;
 }
 
+async function deletePhoto(estimateId: string, photoId: string): Promise<boolean> {
+  const res = await fetch(`/api/estimates/${estimateId}/photos/${photoId}`, { method: "DELETE" });
+  return res.ok;
+}
+
 const PHOTO_TYPES = [
   { value: "GENERAL", label: "General" },
   { value: "BEFORE", label: "Before" },
@@ -32,6 +37,24 @@ export function PhotoUpload({ estimateId, photos, onUpdate }: PhotoUploadProps) 
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [selectedType, setSelectedType] = useState("GENERAL");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleDelete(photoId: string) {
+    setDeletingId(photoId);
+    try {
+      const ok = await deletePhoto(estimateId, photoId);
+      if (ok) {
+        onUpdate(photos.filter((p) => p.id !== photoId));
+        toast({ title: "Photo deleted" });
+      } else {
+        throw new Error();
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to delete photo", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -132,8 +155,19 @@ export function PhotoUpload({ estimateId, photos, onUpdate }: PhotoUploadProps) 
                   unoptimized
                 />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1.5">
-                {typeLabel(photo.photoType)}
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1.5 flex items-center justify-between">
+                <span>{typeLabel(photo.photoType)}</span>
+                <button
+                  onClick={() => handleDelete(photo.id)}
+                  disabled={deletingId === photo.id}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-red-300 hover:text-red-200 ml-2"
+                >
+                  {deletingId === photo.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                </button>
               </div>
             </div>
           ))}

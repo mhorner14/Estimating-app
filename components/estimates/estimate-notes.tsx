@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Send, Lock } from "lucide-react";
+import { Loader2, Send, Lock, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,10 +22,26 @@ interface EstimateNotesProps {
   onNoteAdded: (note: Note) => void;
 }
 
-export function EstimateNotes({ estimateId, notes, onNoteAdded }: EstimateNotesProps) {
+export function EstimateNotes({ estimateId, notes: initialNotes, onNoteAdded }: EstimateNotesProps) {
   const { toast } = useToast();
+  const [notes, setNotes] = useState(initialNotes);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function deleteNote(noteId: string) {
+    setDeletingId(noteId);
+    try {
+      const res = await fetch(`/api/estimates/${estimateId}/notes/${noteId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setNotes((n) => n.filter((x) => x.id !== noteId));
+      toast({ title: "Note deleted" });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete note", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function addNote() {
     if (!content.trim()) return;
@@ -38,6 +54,7 @@ export function EstimateNotes({ estimateId, notes, onNoteAdded }: EstimateNotesP
       });
       if (!res.ok) throw new Error("Failed");
       const note = await res.json();
+      setNotes((n) => [note, ...n]);
       onNoteAdded(note);
       setContent("");
       toast({ title: "Note added" });
@@ -97,9 +114,22 @@ export function EstimateNotes({ estimateId, notes, onNoteAdded }: EstimateNotesP
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium text-slate-900">{name}</span>
-                    <span className="text-xs text-slate-400">{formatDate(note.createdAt)}</span>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-medium text-slate-900">{name}</span>
+                      <span className="text-xs text-slate-400">{formatDate(note.createdAt)}</span>
+                    </div>
+                    <button
+                      onClick={() => deleteNote(note.id)}
+                      disabled={deletingId === note.id}
+                      className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                    >
+                      {deletingId === note.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
                   </div>
                   <p className="text-sm text-slate-600 mt-0.5 whitespace-pre-wrap leading-relaxed">
                     {note.content}
