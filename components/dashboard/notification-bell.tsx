@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Bell, X } from "lucide-react";
+import { Bell, X, Send, Loader2 } from "lucide-react";
 
 interface NotificationItem {
   type: string;
@@ -14,6 +14,7 @@ export function NotificationBell() {
   const [count, setCount] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [batchSending, setBatchSending] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,6 +31,23 @@ export function NotificationBell() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  async function sendBatchFollowUps() {
+    setBatchSending(true);
+    try {
+      const res = await fetch("/api/estimates/batch-follow-up", { method: "POST" });
+      const data = await res.json();
+      alert(data.message);
+      if (data.sent > 0) {
+        setCount((c) => Math.max(c - data.sent, 0));
+        setItems((prev) => prev.filter((item) => item.type !== "stale"));
+      }
+    } catch {
+      alert("Failed to send follow-ups");
+    } finally {
+      setBatchSending(false);
+    }
+  }
 
   const TYPE_ICONS: Record<string, string> = {
     stale: "⏰",
@@ -59,6 +77,18 @@ export function NotificationBell() {
               <X className="w-4 h-4" />
             </button>
           </div>
+          {items.some((i) => i.type === "stale") && (
+            <div className="px-4 py-2 border-b bg-amber-50">
+              <button
+                onClick={sendBatchFollowUps}
+                disabled={batchSending}
+                className="flex items-center gap-1.5 text-xs text-amber-700 hover:text-amber-800 font-medium w-full"
+              >
+                {batchSending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                Send all follow-ups now
+              </button>
+            </div>
+          )}
           {items.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-slate-400">All caught up! 🎉</div>
           ) : (
