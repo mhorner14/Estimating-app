@@ -83,6 +83,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
+  const [sendingBalance, setSendingBalance] = useState(false);
 
   const aiSuggestions = estimate.aiSuggestions as any;
 
@@ -166,6 +167,21 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: e.message || "Failed to send follow-up", variant: "destructive" });
     } finally {
       setSendingFollowUp(false);
+    }
+  }
+
+  async function sendBalanceRequest() {
+    setSendingBalance(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/send-balance`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast({ title: "Balance request sent!", description: "Payment link emailed to customer." });
+      setEstimate((e: any) => ({ ...e, status: "BALANCE_DUE" }));
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to send balance request", variant: "destructive" });
+    } finally {
+      setSendingBalance(false);
     }
   }
 
@@ -382,6 +398,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 <DropdownMenuItem onClick={sendFollowUp} disabled={sendingFollowUp}>
                   <Send className="w-4 h-4 mr-2" />
                   {sendingFollowUp ? "Sending..." : "Send Follow-up Email"}
+                </DropdownMenuItem>
+              )}
+              {["COMPLETED", "IN_PROGRESS", "SCHEDULED", "DEPOSIT_PAID"].includes(estimate.status) && estimate.project?.customer?.email && (
+                <DropdownMenuItem onClick={sendBalanceRequest} disabled={sendingBalance}>
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  {sendingBalance ? "Sending..." : "Send Balance Request"}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
