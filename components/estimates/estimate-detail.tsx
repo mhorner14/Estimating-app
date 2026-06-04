@@ -27,6 +27,7 @@ import {
   StickyNote,
   Copy,
   Check,
+  Download,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -245,6 +246,13 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
             <Button variant="outline" asChild>
               <a href={proposalLink} target="_blank" rel="noreferrer">
                 <ExternalLink className="mr-2 w-4 h-4" /> View Proposal
+              </a>
+            </Button>
+          )}
+          {estimate.scopeOfWork && (
+            <Button variant="outline" asChild>
+              <a href={`/api/estimates/${estimate.id}/pdf`} download>
+                <Download className="mr-2 w-4 h-4" /> Download PDF
               </a>
             </Button>
           )}
