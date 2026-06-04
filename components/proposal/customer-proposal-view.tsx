@@ -355,6 +355,24 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
               </div>
             </div>
 
+            {/* Optional Add-ons */}
+            {estimate.lineItems.some((i: any) => i.isOptional) && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Optional Add-ons</h3>
+                <div className="space-y-2">
+                  {estimate.lineItems.filter((i: any) => i.isOptional).map((item: any) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-slate-50">
+                      <div className="flex-1 min-w-0 pr-4">
+                        <p className="text-sm font-medium text-slate-800">{item.description}</p>
+                      </div>
+                      <p className="text-sm font-bold text-slate-700 shrink-0">{formatCurrency(item.totalPrice)}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Interested in any add-ons? Mention them when you contact us.</p>
+              </div>
+            )}
+
             <Separator />
 
             {/* Payment */}
