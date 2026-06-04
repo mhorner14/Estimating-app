@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, MapPin, Phone, Mail, CheckCircle, PenLine, DollarSign, Loader2, AlertCircle, CreditCard, Printer } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, CheckCircle, PenLine, DollarSign, Loader2, AlertCircle, CreditCard, Printer, CalendarDays } from "lucide-react";
+import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -171,6 +172,14 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
               <p className="text-slate-500">On {formatDate(estimate.signature.signedAt)}</p>
             </div>
           )}
+          <div className="mt-4">
+            <Link
+              href={`/proposal/${proposal.publicToken}/schedule`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-medium transition-colors"
+            >
+              <CalendarDays className="w-4 h-4" /> Request a Start Date
+            </Link>
+          </div>
         </div>
       </div>
     );
