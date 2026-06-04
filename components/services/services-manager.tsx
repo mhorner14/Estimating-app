@@ -77,6 +77,9 @@ export function ServicesManager({ services: initialServices, companyId }: Props)
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [form, setForm] = useState<ServiceFormData>(defaultForm);
   const [loading, setLoading] = useState(false);
+  const [bulkAdjOpen, setBulkAdjOpen] = useState(false);
+  const [bulkPct, setBulkPct] = useState("");
+  const [bulkAdjusting, setBulkAdjusting] = useState(false);
 
   function openNew() {
     setEditingService(null);
@@ -177,6 +180,37 @@ export function ServicesManager({ services: initialServices, companyId }: Props)
     }
   }
 
+  async function applyBulkAdjustment() {
+    const pct = parseFloat(bulkPct);
+    if (isNaN(pct) || pct === 0) return;
+    setBulkAdjusting(true);
+    try {
+      const multiplier = 1 + pct / 100;
+      const updated = await Promise.all(
+        services.filter((s) => s.isActive).map(async (s) => {
+          const newPrice = Math.round(Number(s.basePrice) * multiplier * 100) / 100;
+          const res = await fetch(`/api/services/${s.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ basePrice: newPrice }),
+          });
+          return res.ok ? { ...s, basePrice: newPrice } : s;
+        })
+      );
+      setServices((prev) => prev.map((s) => {
+        const u = updated.find((x) => x.id === s.id);
+        return u || s;
+      }));
+      toast({ title: `Prices ${pct > 0 ? "increased" : "decreased"} by ${Math.abs(pct)}%` });
+      setBulkAdjOpen(false);
+      setBulkPct("");
+    } catch {
+      toast({ title: "Error", description: "Failed to update prices", variant: "destructive" });
+    } finally {
+      setBulkAdjusting(false);
+    }
+  }
+
   const categoryLabel = (cat: string) => SERVICE_CATEGORIES.find((c) => c.value === cat)?.label || cat;
   const pricingLabel = (type: string) => PRICING_TYPES.find((t) => t.value === type)?.label || type;
 
@@ -184,9 +218,16 @@ export function ServicesManager({ services: initialServices, companyId }: Props)
     <div>
       <div className="flex justify-between items-center mb-6">
         <p className="text-sm text-slate-500">{services.length} services configured</p>
-        <Button onClick={openNew}>
-          <PlusCircle className="w-4 h-4 mr-2" /> Add Service
-        </Button>
+        <div className="flex gap-2">
+          {services.length > 0 && (
+            <Button variant="outline" onClick={() => setBulkAdjOpen(true)}>
+              <DollarSign className="w-4 h-4 mr-2" /> Adjust All Prices
+            </Button>
+          )}
+          <Button onClick={openNew}>
+            <PlusCircle className="w-4 h-4 mr-2" /> Add Service
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -330,6 +371,59 @@ export function ServicesManager({ services: initialServices, companyId }: Props)
             <Button onClick={handleSave} disabled={loading || !form.name || !form.basePrice}>
               {loading && <Loader2 className="mr-2 w-4 h-4 animate-spin" />}
               {editingService ? "Save Changes" : "Add Service"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk price adjustment dialog */}
+      <Dialog open={bulkAdjOpen} onOpenChange={setBulkAdjOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Adjust All Prices</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-slate-600">
+              Adjust base prices for all active services by a percentage. Use a negative number to decrease prices.
+            </p>
+            <div className="space-y-2">
+              <Label>Percentage Change</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={bulkPct}
+                  onChange={(e) => setBulkPct(e.target.value)}
+                  placeholder="e.g. 5 for +5%"
+                  step="0.5"
+                />
+                <span className="text-slate-500 font-medium">%</span>
+              </div>
+            </div>
+            {bulkPct && !isNaN(parseFloat(bulkPct)) && (
+              <div className="bg-slate-50 rounded-lg p-3 text-sm">
+                <p className="font-medium text-slate-700">Preview</p>
+                {services.filter((s) => s.isActive).slice(0, 3).map((s) => {
+                  const newPrice = Math.round(Number(s.basePrice) * (1 + parseFloat(bulkPct) / 100) * 100) / 100;
+                  return (
+                    <p key={s.id} className="text-slate-500 text-xs mt-1">
+                      {s.name}: ${Number(s.basePrice).toFixed(2)} → ${newPrice.toFixed(2)}
+                    </p>
+                  );
+                })}
+                {services.filter((s) => s.isActive).length > 3 && (
+                  <p className="text-xs text-slate-400 mt-1">and {services.filter((s) => s.isActive).length - 3} more...</p>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkAdjOpen(false)}>Cancel</Button>
+            <Button
+              onClick={applyBulkAdjustment}
+              disabled={bulkAdjusting || !bulkPct || isNaN(parseFloat(bulkPct)) || parseFloat(bulkPct) === 0}
+            >
+              {bulkAdjusting && <Loader2 className="mr-2 w-4 h-4 animate-spin" />}
+              Apply to {services.filter((s) => s.isActive).length} Services
             </Button>
           </DialogFooter>
         </DialogContent>
