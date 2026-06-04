@@ -23,6 +23,7 @@ export default async function EstimatesPage() {
     status: e.status,
     totalAmount: Number(e.totalAmount),
     createdAt: e.createdAt.toISOString(),
+    sentAt: e.sentAt?.toISOString() ?? null,
     project: {
       customer: {
         name: e.project.customer.name,

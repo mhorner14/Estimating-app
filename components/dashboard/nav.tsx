@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { GlobalSearch } from "@/components/global-search";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,7 +72,7 @@ function NavContent({ user, pathname, onClose }: { user: NavProps["user"]; pathn
         )}
       </div>
 
-      <div className="p-4">
+      <div className="p-4 space-y-2">
         <Link
           href="/estimates/new"
           onClick={onClose}
@@ -80,6 +81,7 @@ function NavContent({ user, pathname, onClose }: { user: NavProps["user"]; pathn
           <PlusCircle className="w-4 h-4" />
           New Estimate
         </Link>
+        <GlobalSearch />
       </div>
 
       <nav className="flex-1 px-3 pb-4 space-y-1 overflow-y-auto">

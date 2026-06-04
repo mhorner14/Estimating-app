@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, X, Download } from "lucide-react";
+import { Search, X, Download, Clock } from "lucide-react";
 import { formatCurrency, formatDate, ESTIMATE_STATUS_LABELS, ESTIMATE_STATUS_COLORS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ interface Estimate {
   status: string;
   totalAmount: number;
   createdAt: string;
+  sentAt?: string | null;
   project: {
     customer: {
       name: string;
@@ -185,9 +186,22 @@ export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
                 {filtered.map((estimate) => (
                   <tr key={estimate.id} className="border-b last:border-0 hover:bg-slate-50 transition-colors">
                     <td className="p-4">
-                      <Link href={`/estimates/${estimate.id}`} className="hover:underline font-medium text-slate-900">
-                        {estimate.project.customer.name}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/estimates/${estimate.id}`} className="hover:underline font-medium text-slate-900">
+                          {estimate.project.customer.name}
+                        </Link>
+                        {["SENT", "VIEWED"].includes(estimate.status) && estimate.sentAt && (() => {
+                          const daysSinceSent = Math.floor((Date.now() - new Date(estimate.sentAt!).getTime()) / 86400000);
+                          if (daysSinceSent >= 3) {
+                            return (
+                              <span title={`Sent ${daysSinceSent} days ago — consider following up`} className="text-amber-500">
+                                <Clock className="w-3.5 h-3.5" />
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                       {estimate.project.customer.phone && (
                         <p className="text-xs text-slate-500 mt-0.5">{estimate.project.customer.phone}</p>
                       )}
