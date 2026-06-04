@@ -4,16 +4,17 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Phone, Mail, MapPin, Tag, PlusCircle } from "lucide-react";
+import { ArrowLeft, PlusCircle, Tag } from "lucide-react";
 import { formatCurrency, formatDate, ESTIMATE_STATUS_LABELS, ESTIMATE_STATUS_COLORS } from "@/lib/utils";
+import { CustomerContactCard } from "@/components/customers/customer-contact-card";
 
-export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
+export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await auth();
   const companyId = (session?.user as any)?.companyId;
 
   const customer = await prisma.customer.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       projects: {
         include: {
@@ -61,40 +62,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-600">Contact Info</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {customer.phone && (
-                <a href={`tel:${customer.phone}`} className="flex items-center gap-2 text-slate-700 hover:text-blue-600">
-                  <Phone className="w-4 h-4 text-slate-400" /> {customer.phone}
-                </a>
-              )}
-              {customer.email && (
-                <a href={`mailto:${customer.email}`} className="flex items-center gap-2 text-slate-700 hover:text-blue-600">
-                  <Mail className="w-4 h-4 text-slate-400" /> {customer.email}
-                </a>
-              )}
-              {(customer.projectAddress || customer.city) && (
-                <div className="flex items-start gap-2 text-slate-700">
-                  <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                  <div>
-                    {customer.projectAddress && <p>{customer.projectAddress}</p>}
-                    {(customer.city || customer.state) && (
-                      <p>{[customer.city, customer.state, customer.zip].filter(Boolean).join(", ")}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-              {customer.notes && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-slate-500 font-medium mb-1">Notes</p>
-                  <p className="text-slate-600 text-xs">{customer.notes}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CustomerContactCard customer={customer} />
 
           <div className="grid grid-cols-2 gap-3">
             <Card className="text-center p-4">
