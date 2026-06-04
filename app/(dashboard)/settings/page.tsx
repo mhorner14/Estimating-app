@@ -3,11 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { CompanySettings } from "@/components/settings/company-settings";
 import { WarrantyRulesManager } from "@/components/settings/warranty-rules-manager";
 import { EmailTemplatesSettings } from "@/components/settings/email-templates-settings";
+import { ProfileSettings } from "@/components/settings/profile-settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function SettingsPage() {
   const session = await auth();
   const companyId = (session?.user as any)?.companyId;
+
+  const userId = (session?.user as any)?.id;
 
   const [company, warrantyRules] = await Promise.all([
     prisma.company.findUnique({ where: { id: companyId } }),
@@ -31,6 +34,7 @@ export default async function SettingsPage() {
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="warranty">Warranty Rules</TabsTrigger>
           <TabsTrigger value="emails">Email Templates</TabsTrigger>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
         </TabsList>
         <TabsContent value="company">
           <CompanySettings company={company as any} />
@@ -40,6 +44,9 @@ export default async function SettingsPage() {
         </TabsContent>
         <TabsContent value="emails">
           <EmailTemplatesSettings company={company as any} />
+        </TabsContent>
+        <TabsContent value="profile">
+          <ProfileSettings user={{ id: userId, name: session?.user?.name, email: session?.user?.email }} />
         </TabsContent>
       </Tabs>
     </div>
