@@ -33,6 +33,8 @@ import {
   Trash2,
   CopyPlus,
   MoreHorizontal,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -257,6 +259,24 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
     } finally {
       setSavingDiscount(false);
     }
+  }
+
+  async function moveLineItem(index: number, direction: "up" | "down") {
+    const items = [...estimate.lineItems];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+    [items[index], items[targetIndex]] = [items[targetIndex], items[index]];
+    const reordered = items.map((item: any, i: number) => ({ ...item, sortOrder: i }));
+    setEstimate((e: any) => ({ ...e, lineItems: reordered }));
+    await Promise.all(
+      [reordered[index], reordered[targetIndex]].map((item: any) =>
+        fetch(`/api/estimates/${estimate.id}/line-items/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: item.sortOrder }),
+        })
+      )
+    );
   }
 
   async function saveLineItem(lineItemId: string) {
@@ -508,10 +528,10 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                       </tr>
                     </thead>
                     <tbody>
-                      {estimate.lineItems.map((item: any) => (
+                      {estimate.lineItems.map((item: any, index: number) => (
                         <tr
                           key={item.id}
-                          className="border-b last:border-0 hover:bg-slate-50"
+                          className="border-b last:border-0 hover:bg-slate-50 group"
                         >
                           {editingLine === item.id ? (
                             <>
@@ -604,19 +624,37 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                                 {formatCurrency(item.totalPrice)}
                               </td>
                               <td className="p-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingLine(item.id);
-                                    setLineEdits((p) => ({
-                                      ...p,
-                                      [item.id]: { ...item },
-                                    }));
-                                  }}
-                                >
-                                  <Edit3 className="w-3 h-3" />
-                                </Button>
+                                <div className="flex items-center gap-0.5">
+                                  <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => moveLineItem(index, "up")}
+                                      disabled={index === 0}
+                                      className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-0.5"
+                                    >
+                                      <ArrowUp className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => moveLineItem(index, "down")}
+                                      disabled={index === estimate.lineItems.length - 1}
+                                      className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-0.5"
+                                    >
+                                      <ArrowDown className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingLine(item.id);
+                                      setLineEdits((p) => ({
+                                        ...p,
+                                        [item.id]: { ...item },
+                                      }));
+                                    }}
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               </td>
                             </>
                           )}

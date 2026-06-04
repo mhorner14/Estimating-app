@@ -20,12 +20,18 @@ export async function PATCH(
   await prisma.estimateLineItem.update({
     where: { id: lineItemId },
     data: {
-      description: body.description,
-      quantity: body.quantity,
-      unitPrice: body.unitPrice,
-      totalPrice: body.totalPrice,
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.quantity !== undefined && { quantity: body.quantity }),
+      ...(body.unitPrice !== undefined && { unitPrice: body.unitPrice }),
+      ...(body.totalPrice !== undefined && { totalPrice: body.totalPrice }),
+      ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
     },
   });
+
+  // If only reordering, return a lightweight response
+  if (body.sortOrder !== undefined && body.description === undefined) {
+    return NextResponse.json({ ok: true });
+  }
 
   const allItems = await prisma.estimateLineItem.findMany({ where: { estimateId: id } });
   const company = await prisma.company.findUnique({ where: { id: companyId } });
