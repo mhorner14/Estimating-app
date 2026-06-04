@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,9 @@ import {
   Copy,
   Check,
   Download,
+  Trash2,
+  CopyPlus,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -36,6 +40,13 @@ import {
   ESTIMATE_STATUS_COLORS,
 } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProposalPreview } from "./proposal-preview";
 import { AddLineItemDialog } from "./add-line-item-dialog";
 import { AIChat } from "./ai-chat";
@@ -49,6 +60,7 @@ interface EstimateDetailProps {
 
 export function EstimateDetail({ estimate: initialEstimate, services }: EstimateDetailProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [estimate, setEstimate] = useState(initialEstimate);
   const [loading, setLoading] = useState(false);
   const [generatingProposal, setGeneratingProposal] = useState(false);
@@ -67,6 +79,8 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
     squareFootage: String(initialEstimate.squareFootage || ""),
   });
   const [savingJobDetails, setSavingJobDetails] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
 
   const aiSuggestions = estimate.aiSuggestions as any;
 
@@ -136,6 +150,34 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to send proposal", variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function deleteEstimate() {
+    if (!confirm("Delete this estimate? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast({ title: "Estimate deleted" });
+      router.push("/estimates");
+    } catch {
+      toast({ title: "Error", description: "Failed to delete", variant: "destructive" });
+      setDeleting(false);
+    }
+  }
+
+  async function duplicateEstimate() {
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/duplicate`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      const copy = await res.json();
+      toast({ title: "Estimate duplicated" });
+      router.push(`/estimates/${copy.id}`);
+    } catch {
+      toast({ title: "Error", description: "Failed to duplicate", variant: "destructive" });
+      setDuplicating(false);
     }
   }
 
@@ -309,6 +351,28 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
               </a>
             </Button>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={duplicateEstimate} disabled={duplicating}>
+                <CopyPlus className="w-4 h-4 mr-2" />
+                {duplicating ? "Duplicating..." : "Duplicate Estimate"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={deleteEstimate}
+                disabled={deleting}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {deleting ? "Deleting..." : "Delete Estimate"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
