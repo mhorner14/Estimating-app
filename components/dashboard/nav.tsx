@@ -13,6 +13,7 @@ import {
   Building2,
   PlusCircle,
   ChevronDown,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,6 +38,7 @@ const navItems = [
   { href: "/estimates", label: "Estimates", icon: FileText },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/services", label: "Services & Pricing", icon: Wrench },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

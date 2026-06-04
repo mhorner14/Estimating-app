@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft,
   FileText,
@@ -1001,6 +1002,29 @@ function PaymentTab({
 }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [recordForm, setRecordForm] = useState({ amount: "", type: "DEPOSIT", note: "" });
+  const [recording, setRecording] = useState(false);
+
+  async function recordManualPayment() {
+    if (!recordForm.amount) return;
+    setRecording(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(recordForm),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      onUpdate(data.estimate);
+      setRecordForm({ amount: "", type: "DEPOSIT", note: "" });
+      toast({ title: "Payment recorded" });
+    } catch {
+      toast({ title: "Error", description: "Failed to record payment", variant: "destructive" });
+    } finally {
+      setRecording(false);
+    }
+  }
 
   async function createPaymentLink(type: string) {
     setLoading(true);
@@ -1110,10 +1134,69 @@ function PaymentTab({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Payment History</CardTitle>
-        </CardHeader>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Record Manual Payment</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-medium">Payment Type</label>
+                <Select
+                  value={recordForm.type}
+                  onValueChange={(v) => setRecordForm((f) => ({ ...f, type: v }))}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DEPOSIT">Deposit</SelectItem>
+                    <SelectItem value="BALANCE">Balance</SelectItem>
+                    <SelectItem value="FULL">Full Payment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-medium">Amount</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={recordForm.amount}
+                    onChange={(e) => setRecordForm((f) => ({ ...f, amount: e.target.value }))}
+                    className="h-8 pl-7 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500 font-medium">Note (optional)</label>
+              <Input
+                placeholder="Check #, cash, Venmo..."
+                value={recordForm.note}
+                onChange={(e) => setRecordForm((f) => ({ ...f, note: e.target.value }))}
+                className="h-8 text-sm"
+              />
+            </div>
+            <Button
+              size="sm"
+              className="w-full"
+              onClick={recordManualPayment}
+              disabled={recording || !recordForm.amount}
+            >
+              {recording ? <Loader2 className="mr-2 w-3.5 h-3.5 animate-spin" /> : null}
+              Record Payment
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Payment History</CardTitle>
+          </CardHeader>
         <CardContent>
           {estimate.payments?.length === 0 ? (
             <p className="text-slate-500 text-sm text-center py-8">No payments yet</p>
@@ -1148,6 +1231,7 @@ function PaymentTab({
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
