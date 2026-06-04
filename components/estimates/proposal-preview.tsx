@@ -1,10 +1,13 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Loader2, Building2, MapPin, Calendar, Phone, Mail } from "lucide-react";
+import { Sparkles, Loader2, Building2, MapPin, Phone, Mail, Pencil, Save, X } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProposalPreviewProps {
   estimate: any;
@@ -12,7 +15,116 @@ interface ProposalPreviewProps {
   generating: boolean;
 }
 
-export function ProposalPreview({ estimate, onGenerate, generating }: ProposalPreviewProps) {
+const EDITABLE_FIELDS = [
+  { key: "proposalTitle", label: "Proposal Title", multiline: false },
+  { key: "scopeOfWork", label: "Scope of Work", multiline: true },
+  { key: "prepSteps", label: "Surface Preparation", multiline: true },
+  { key: "productsIncluded", label: "System & Products", multiline: true },
+  { key: "colorSelection", label: "Color Selection", multiline: false },
+  { key: "warrantyText", label: "Warranty", multiline: true },
+  { key: "exclusions", label: "Exclusions", multiline: true },
+] as const;
+
+type EditableKey = typeof EDITABLE_FIELDS[number]["key"];
+
+function EditableSection({
+  label,
+  value,
+  fieldKey,
+  multiline,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  fieldKey: EditableKey;
+  multiline: boolean;
+  onSave: (key: EditableKey, val: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    await onSave(fieldKey, draft);
+    setSaving(false);
+    setEditing(false);
+  }
+
+  function cancel() {
+    setDraft(value);
+    setEditing(false);
+  }
+
+  if (!value && !editing) return null;
+
+  return (
+    <div className="group">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</h3>
+        {!editing && (
+          <button
+            onClick={() => { setDraft(value); setEditing(true); }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
+          >
+            <Pencil className="w-3 h-3" /> Edit
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <div className="space-y-2">
+          {multiline ? (
+            <Textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={5}
+              className="text-sm"
+              autoFocus
+            />
+          ) : (
+            <Input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="text-sm"
+              autoFocus
+            />
+          )}
+          <div className="flex gap-2">
+            <Button size="sm" onClick={save} disabled={saving}>
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3 h-3 mr-1" /> Save</>}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={cancel}>
+              <X className="w-3 h-3 mr-1" /> Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{value}</p>
+      )}
+    </div>
+  );
+}
+
+export function ProposalPreview({ estimate: initialEstimate, onGenerate, generating }: ProposalPreviewProps) {
+  const { toast } = useToast();
+  const [estimate, setEstimate] = useState(initialEstimate);
+
+  const handleSave = useCallback(async (key: EditableKey, value: string) => {
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: value }),
+      });
+      if (!res.ok) throw new Error();
+      setEstimate((e: any) => ({ ...e, [key]: value }));
+      toast({ title: "Saved" });
+    } catch {
+      toast({ title: "Error", description: "Failed to save", variant: "destructive" });
+      throw new Error("save failed");
+    }
+  }, [estimate.id, toast]);
+
   if (!estimate.scopeOfWork) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -40,7 +152,7 @@ export function ProposalPreview({ estimate, onGenerate, generating }: ProposalPr
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Proposal Document */}
+      <p className="text-xs text-slate-400 text-center mb-3">Hover over any section to edit it inline</p>
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         {/* Header */}
         <div className="bg-slate-900 text-white p-8">
@@ -66,11 +178,6 @@ export function ProposalPreview({ estimate, onGenerate, generating }: ProposalPr
                 {company?.email && (
                   <div className="flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5" /> {company.email}
-                  </div>
-                )}
-                {company?.website && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">🌐</span> {company.website}
                   </div>
                 )}
               </div>
@@ -104,42 +211,25 @@ export function ProposalPreview({ estimate, onGenerate, generating }: ProposalPr
 
           {/* Title */}
           {estimate.proposalTitle && (
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">{estimate.proposalTitle}</h2>
+            <div className="group">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900">{estimate.proposalTitle}</h2>
+              </div>
             </div>
           )}
 
-          {/* Scope of Work */}
-          {estimate.scopeOfWork && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Scope of Work</h3>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{estimate.scopeOfWork}</p>
-            </div>
-          )}
-
-          {/* Surface Preparation */}
-          {estimate.prepSteps && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Surface Preparation</h3>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{estimate.prepSteps}</p>
-            </div>
-          )}
-
-          {/* Products / System */}
-          {estimate.productsIncluded && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">System & Products</h3>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{estimate.productsIncluded}</p>
-            </div>
-          )}
-
-          {/* Color */}
-          {estimate.colorSelection && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1">Color Selection</h3>
-              <p className="text-slate-700">{estimate.colorSelection}</p>
-            </div>
-          )}
+          {EDITABLE_FIELDS.slice(0, 5).map((field) => (
+            estimate[field.key] ? (
+              <EditableSection
+                key={field.key}
+                label={field.label}
+                value={estimate[field.key]}
+                fieldKey={field.key}
+                multiline={field.multiline}
+                onSave={handleSave}
+              />
+            ) : null
+          ))}
 
           <Separator />
 
@@ -162,10 +252,10 @@ export function ProposalPreview({ estimate, onGenerate, generating }: ProposalPr
                     <tr key={item.id} className="border-b border-slate-100">
                       <td className="py-3 text-slate-700">{item.description}</td>
                       <td className="py-3 text-right text-slate-600">
-                        {item.quantity.toLocaleString()} {item.unit}
+                        {Number(item.quantity).toLocaleString()} {item.unit}
                       </td>
-                      <td className="py-3 text-right text-slate-600">{formatCurrency(item.unitPrice)}</td>
-                      <td className="py-3 text-right font-medium">{formatCurrency(item.totalPrice)}</td>
+                      <td className="py-3 text-right text-slate-600">{formatCurrency(Number(item.unitPrice))}</td>
+                      <td className="py-3 text-right font-medium">{formatCurrency(Number(item.totalPrice))}</td>
                     </tr>
                   ))}
               </tbody>
@@ -174,21 +264,49 @@ export function ProposalPreview({ estimate, onGenerate, generating }: ProposalPr
             <div className="mt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Subtotal</span>
-                <span>{formatCurrency(estimate.subtotal)}</span>
+                <span>{formatCurrency(Number(estimate.subtotal))}</span>
               </div>
-              {estimate.taxAmount > 0 && (
+              {Number(estimate.discountAmount) > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Discount</span>
+                  <span>-{formatCurrency(Number(estimate.discountAmount))}</span>
+                </div>
+              )}
+              {Number(estimate.taxAmount) > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Tax</span>
-                  <span>{formatCurrency(estimate.taxAmount)}</span>
+                  <span>{formatCurrency(Number(estimate.taxAmount))}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>Total Investment</span>
-                <span>{formatCurrency(estimate.totalAmount)}</span>
+                <span>{formatCurrency(Number(estimate.totalAmount))}</span>
               </div>
             </div>
           </div>
+
+          {estimate.lineItems.filter((i: any) => i.isOptional).length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Optional Add-ons</h3>
+                <table className="w-full text-sm">
+                  <tbody>
+                    {estimate.lineItems
+                      .filter((item: any) => item.isOptional)
+                      .map((item: any) => (
+                        <tr key={item.id} className="border-b border-slate-100">
+                          <td className="py-3 text-slate-600 italic">{item.description}</td>
+                          <td className="py-3 text-right text-slate-500">{Number(item.quantity).toLocaleString()} {item.unit}</td>
+                          <td className="py-3 text-right font-medium text-slate-600">{formatCurrency(Number(item.totalPrice))}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           <Separator />
 
@@ -196,31 +314,29 @@ export function ProposalPreview({ estimate, onGenerate, generating }: ProposalPr
           <div className="grid grid-cols-2 gap-4 p-4 border border-blue-100 bg-blue-50 rounded-lg">
             <div className="text-center">
               <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-1">Deposit Due</p>
-              <p className="text-2xl font-bold text-blue-700">{formatCurrency(estimate.depositAmount)}</p>
+              <p className="text-2xl font-bold text-blue-700">{formatCurrency(Number(estimate.depositAmount))}</p>
               <p className="text-xs text-blue-600 mt-1">Due upon acceptance</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide mb-1">Balance Due</p>
-              <p className="text-2xl font-bold text-slate-700">{formatCurrency(estimate.balanceDue)}</p>
+              <p className="text-2xl font-bold text-slate-700">{formatCurrency(Number(estimate.balanceDue))}</p>
               <p className="text-xs text-slate-600 mt-1">Due upon completion</p>
             </div>
           </div>
 
-          {/* Warranty */}
-          {estimate.warrantyText && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Warranty</h3>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{estimate.warrantyText}</p>
-            </div>
-          )}
-
-          {/* Exclusions */}
-          {estimate.exclusions && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Exclusions</h3>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{estimate.exclusions}</p>
-            </div>
-          )}
+          {/* Warranty + Exclusions */}
+          {[EDITABLE_FIELDS[5], EDITABLE_FIELDS[6]].map((field) => (
+            estimate[field.key] ? (
+              <EditableSection
+                key={field.key}
+                label={field.label}
+                value={estimate[field.key]}
+                fieldKey={field.key}
+                multiline={field.multiline}
+                onSave={handleSave}
+              />
+            ) : null
+          ))}
 
           {/* Signature Block */}
           {estimate.signature ? (
