@@ -13,6 +13,8 @@ export async function sendProposalEmail({
   totalAmount,
   proposalUrl,
   depositAmount,
+  customSubject,
+  customBody,
 }: {
   to: string;
   customerName: string;
@@ -21,10 +23,37 @@ export async function sendProposalEmail({
   totalAmount: number;
   proposalUrl: string;
   depositAmount: number;
+  customSubject?: string | null;
+  customBody?: string | null;
 }) {
   const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
-  const html = `
+  function applyVars(template: string) {
+    return template
+      .replace(/\{\{companyName\}\}/g, companyName)
+      .replace(/\{\{customerName\}\}/g, customerName)
+      .replace(/\{\{estimateNumber\}\}/g, estimateNumber)
+      .replace(/\{\{total\}\}/g, formatter.format(totalAmount))
+      .replace(/\{\{deposit\}\}/g, formatter.format(depositAmount))
+      .replace(/\{\{proposalLink\}\}/g, proposalUrl);
+  }
+
+  const subject = customSubject
+    ? applyVars(customSubject)
+    : `Your Proposal from ${companyName} — ${estimateNumber}`;
+
+  const customHtml = customBody
+    ? `<!DOCTYPE html><html><body style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">
+  <div style="background: #0f172a; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 20px;">${companyName}</h1>
+  </div>
+  <div style="background: white; border: 1px solid #e2e8f0; border-top: none; padding: 32px; border-radius: 0 0 12px 12px;">
+    ${applyVars(customBody).split("\n\n").map((p) => `<p style="color:#475569;line-height:1.6;margin:0 0 16px">${p.replace(/\n/g,"<br>")}</p>`).join("")}
+    <div style="text-align:center;margin:32px 0"><a href="${proposalUrl}" style="background:#2563eb;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600">Review & Sign Proposal</a></div>
+  </div></body></html>`
+    : null;
+
+  const html = customHtml || `
 <!DOCTYPE html>
 <html>
 <head>
@@ -84,14 +113,14 @@ export async function sendProposalEmail({
     const { data, error } = await resend.emails.send({
       from: `${companyName} <${FROM_EMAIL}>`,
       to,
-      subject: `Your Proposal from ${companyName} — ${estimateNumber}`,
+      subject,
       html,
     });
 
     await prisma.emailLog.create({
       data: {
         to,
-        subject: `Your Proposal from ${companyName} — ${estimateNumber}`,
+        subject,
         template: "proposal_sent",
         status: error ? "failed" : "sent",
         messageId: data?.id,

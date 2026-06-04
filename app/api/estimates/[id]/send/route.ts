@@ -52,9 +52,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       customerName: estimate.project.customer.name,
       companyName: estimate.company.name,
       estimateNumber: estimate.estimateNumber,
-      totalAmount: estimate.totalAmount,
+      totalAmount: Number(estimate.totalAmount),
       proposalUrl,
-      depositAmount: estimate.depositAmount,
+      depositAmount: Number(estimate.depositAmount),
+      customSubject: estimate.company.proposalEmailSubject,
+      customBody: estimate.company.proposalEmailBody,
     });
   }
 
