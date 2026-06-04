@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
   const [allEstimates, recentEstimates, customers] = await Promise.all([
     prisma.estimate.findMany({
       where: { companyId },
-      select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true },
+      select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true, lostReason: true },
     }),
     prisma.estimate.findMany({
       where: { companyId, createdAt: { gte: since } },
-      select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true },
+      select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true, lostReason: true },
       orderBy: { createdAt: "asc" },
     }),
     prisma.customer.findMany({
@@ -91,11 +91,24 @@ export async function GET(req: NextRequest) {
   const closeRate = (wonCount + lostCount) > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : 0;
   const avgJobSize = wonCount > 0 ? Math.round(totalWonRevenue / wonCount) : 0;
 
+  // Lost reason breakdown
+  const lostReasons: Record<string, number> = {};
+  for (const e of allEstimates) {
+    if (e.status === "LOST") {
+      const reason = e.lostReason || "No reason recorded";
+      lostReasons[reason] = (lostReasons[reason] || 0) + 1;
+    }
+  }
+  const lostReasonData = Object.entries(lostReasons)
+    .sort((a, b) => b[1] - a[1])
+    .map(([reason, count]) => ({ reason, count, pct: lostCount > 0 ? Math.round((count / lostCount) * 100) : 0 }));
+
   return NextResponse.json({
     summary: { totalCount, wonCount, lostCount, closeRate, totalWonRevenue, totalPending, avgMargin, avgJobSize },
     monthly,
     leadSourceData,
     statusCounts,
     statusRevenue,
+    lostReasonData,
   });
 }

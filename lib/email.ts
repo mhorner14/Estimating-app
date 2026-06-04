@@ -15,6 +15,7 @@ export async function sendProposalEmail({
   depositAmount,
   customSubject,
   customBody,
+  trackingToken,
 }: {
   to: string;
   customerName: string;
@@ -25,6 +26,7 @@ export async function sendProposalEmail({
   depositAmount: number;
   customSubject?: string | null;
   customBody?: string | null;
+  trackingToken?: string | null;
 }) {
   const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
@@ -41,6 +43,10 @@ export async function sendProposalEmail({
   const subject = customSubject
     ? applyVars(customSubject)
     : `Your Proposal from ${companyName} — ${estimateNumber}`;
+
+  const trackingPixel = trackingToken
+    ? `<img src="${process.env.NEXT_PUBLIC_APP_URL}/api/track/open?t=${trackingToken}" width="1" height="1" style="display:block;width:1px;height:1px;opacity:0" alt="" />`
+    : "";
 
   const customHtml = customBody
     ? `<!DOCTYPE html><html><body style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">
@@ -106,6 +112,7 @@ export async function sendProposalEmail({
   <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 20px 0 0;">
     ${companyName} · Questions? Reply to this email.
   </p>
+  ${trackingPixel}
 </body>
 </html>`;
 

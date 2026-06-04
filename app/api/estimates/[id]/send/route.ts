@@ -57,6 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       depositAmount: Number(estimate.depositAmount),
       customSubject: estimate.company.proposalEmailSubject,
       customBody: estimate.company.proposalEmailBody,
+      trackingToken: estimate.proposal.publicToken,
     });
   }
 

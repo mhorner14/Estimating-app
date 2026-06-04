@@ -88,6 +88,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [duplicating, setDuplicating] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [sendingBalance, setSendingBalance] = useState(false);
+  const [markLostOpen, setMarkLostOpen] = useState(false);
+  const [lostReason, setLostReason] = useState("");
+  const [customLostReason, setCustomLostReason] = useState("");
 
   const aiSuggestions = estimate.aiSuggestions as any;
 
@@ -115,6 +118,29 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       const updated = await res.json();
       setEstimate((e: any) => ({ ...e, ...updated }));
       toast({ title: "Status updated" });
+    } catch {
+      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmMarkLost() {
+    const reason = lostReason === "Other" ? customLostReason : lostReason;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "LOST", lostReason: reason || undefined }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      const updated = await res.json();
+      setEstimate((e: any) => ({ ...e, ...updated }));
+      toast({ title: "Estimate marked as lost" });
+      setMarkLostOpen(false);
+      setLostReason("");
+      setCustomLostReason("");
     } catch {
       toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
     } finally {
@@ -1020,7 +1046,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                     size="sm"
                     variant="outline"
                     className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={() => updateStatus("LOST")}
+                    onClick={() => setMarkLostOpen(true)}
                     disabled={loading}
                   >
                     Mark as Lost
@@ -1103,6 +1129,47 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
         onClose={() => setAddLineOpen(false)}
         onAdded={setEstimate}
       />
+
+      {/* Mark Lost Modal */}
+      {markLostOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">Mark Estimate as Lost</h2>
+            <p className="text-sm text-slate-500 mb-4">Help track why this estimate was lost. This data improves your close rate over time.</p>
+            <div className="space-y-2 mb-4">
+              {["Price too high", "Went with competitor", "Customer not ready", "No response", "Project cancelled", "Out of service area", "Other"].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setLostReason(r)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${lostReason === r ? "border-red-500 bg-red-50 text-red-700" : "border-slate-200 hover:border-slate-300 text-slate-700"}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            {lostReason === "Other" && (
+              <Input
+                placeholder="Describe the reason..."
+                value={customLostReason}
+                onChange={(e) => setCustomLostReason(e.target.value)}
+                className="mb-4"
+              />
+            )}
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => { setMarkLostOpen(false); setLostReason(""); setCustomLostReason(""); }}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={confirmMarkLost}
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Lost"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

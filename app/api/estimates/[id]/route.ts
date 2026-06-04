@@ -71,6 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.actualMaterialCost !== undefined && { actualMaterialCost: body.actualMaterialCost }),
       ...(body.actualLaborCost !== undefined && { actualLaborCost: body.actualLaborCost }),
       ...(body.actualTotalCost !== undefined && { actualTotalCost: body.actualTotalCost }),
+      ...(body.lostReason !== undefined && { lostReason: body.lostReason }),
       ...recalcData,
     },
   });

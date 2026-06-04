@@ -26,6 +26,7 @@ interface ReportData {
     closeRate: number;
   }>;
   leadSourceData: Array<{ source: string; count: number; pct: number }>;
+  lostReasonData: Array<{ reason: string; count: number; pct: number }>;
   statusCounts: Record<string, number>;
   statusRevenue: Record<string, number>;
 }
@@ -108,7 +109,7 @@ export function ReportsDashboard() {
     );
   }
 
-  const { summary, monthly, leadSourceData, statusCounts } = data;
+  const { summary, monthly, leadSourceData, lostReasonData, statusCounts } = data;
 
   const maxRevenue = Math.max(...monthly.map((m) => m.wonRevenue), 1);
 
@@ -279,6 +280,30 @@ export function ReportsDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Lost Reasons */}
+      {lostReasonData && lostReasonData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Why Estimates Are Lost</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {lostReasonData.map((item) => (
+                <div key={item.reason}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-slate-700">{item.reason}</span>
+                    <span className="text-sm font-medium text-slate-900">{item.count} ({item.pct}%)</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-red-400 rounded-full transition-all" style={{ width: `${item.pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Monthly activity table */}
       <Card>

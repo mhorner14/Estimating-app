@@ -89,6 +89,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       <a href="${proposalUrl}" style="background: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px;">View Proposal</a>
     </div>
   </div>
+  ${estimate.proposal?.publicToken ? `<img src="${process.env.NEXT_PUBLIC_APP_URL}/api/track/open?t=${estimate.proposal.publicToken}" width="1" height="1" style="display:block;width:1px;height:1px;opacity:0" alt="" />` : ""}
 </body></html>`,
   });
 
