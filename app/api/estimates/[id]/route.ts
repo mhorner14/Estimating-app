@@ -68,6 +68,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.requestedTimeline !== undefined && { requestedTimeline: body.requestedTimeline }),
       ...(body.squareFootage !== undefined && { squareFootage: body.squareFootage }),
       ...(body.scheduledDate !== undefined && { scheduledDate: body.scheduledDate ? new Date(body.scheduledDate) : null }),
+      ...(body.actualMaterialCost !== undefined && { actualMaterialCost: body.actualMaterialCost }),
+      ...(body.actualLaborCost !== undefined && { actualLaborCost: body.actualLaborCost }),
+      ...(body.actualTotalCost !== undefined && { actualTotalCost: body.actualTotalCost }),
       ...recalcData,
     },
   });

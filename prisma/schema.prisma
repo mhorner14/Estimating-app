@@ -276,6 +276,9 @@ model Estimate {
   balanceDue      Float @default(0)
   estimatedCost   Float @default(0)
   estimatedMargin Float @default(0)
+  actualMaterialCost Float?
+  actualLaborCost    Float?
+  actualTotalCost    Float?
 
   proposalTitle    String?
   scopeOfWork      String? @db.Text

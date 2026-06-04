@@ -55,6 +55,7 @@ import { AddLineItemDialog } from "./add-line-item-dialog";
 import { AIChat } from "./ai-chat";
 import { EstimateNotes } from "./estimate-notes";
 import { PhotoUpload } from "./photo-upload";
+import { JobCostsPanel } from "./job-costs-panel";
 
 interface EstimateDetailProps {
   estimate: any;
@@ -487,6 +488,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
           </TabsTrigger>
           <TabsTrigger value="ai">
             <Sparkles className="w-4 h-4 mr-1.5" /> AI Assistant
+          </TabsTrigger>
+          <TabsTrigger value="costs">
+            <TrendingUp className="w-4 h-4 mr-1.5" /> Job Costs
           </TabsTrigger>
           <TabsTrigger value="activity">
             Activity
@@ -1080,6 +1084,10 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
               <AIChat estimateId={estimate.id} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="costs">
+          <JobCostsPanel estimate={estimate} onUpdate={(data) => setEstimate((e: any) => ({ ...e, ...data }))} />
         </TabsContent>
 
         <TabsContent value="activity">
