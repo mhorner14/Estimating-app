@@ -144,8 +144,29 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
           <p className="text-slate-600 mb-6">
             A copy has been saved. You&apos;ll be contacted soon to schedule your project.
           </p>
+          {Number(estimate.depositAmount) > 0 && (
+            <div className="space-y-3">
+              <div className="p-4 bg-white border border-slate-200 rounded-lg text-sm text-center">
+                <p className="text-slate-500 mb-1">Deposit Due</p>
+                <p className="text-2xl font-bold text-blue-700">{formatCurrency(Number(estimate.depositAmount))}</p>
+              </div>
+              <Button
+                size="lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => handlePayDeposit("DEPOSIT")}
+                disabled={payingDeposit}
+              >
+                {payingDeposit ? (
+                  <><Loader2 className="mr-2 w-4 h-4 animate-spin" /> Redirecting...</>
+                ) : (
+                  <><CreditCard className="mr-2 w-4 h-4" /> Pay Deposit Now</>
+                )}
+              </Button>
+              <p className="text-xs text-slate-500 text-center">Secure payment powered by Stripe</p>
+            </div>
+          )}
           {isAlreadySigned && estimate.signature && (
-            <div className="p-4 bg-white border rounded-lg text-left text-sm">
+            <div className="p-4 bg-white border rounded-lg text-left text-sm mt-4">
               <p className="text-slate-500">Signed by <strong>{estimate.signature.signerName}</strong></p>
               <p className="text-slate-500">On {formatDate(estimate.signature.signedAt)}</p>
             </div>
