@@ -1,0 +1,464 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// Auth
+// ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(ESTIMATOR)
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  estimates    Estimate[]
+  notes        Note[]
+  activityLogs ActivityLog[]
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  ESTIMATOR
+  CUSTOMER
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────────
+// Company
+// ─────────────────────────────────────────────
+
+model Company {
+  id                  String   @id @default(cuid())
+  name                String
+  logo                String?
+  phone               String?
+  email               String?
+  website             String?
+  address             String?
+  city                String?
+  state               String?
+  zip                 String?
+  serviceArea         String?
+  licenseNumber       String?
+  insuranceInfo       String?
+  defaultTerms        String?  @db.Text
+  defaultPaymentTerms String?
+  depositPercentage   Float    @default(50)
+  taxRate             Float    @default(0)
+  taxEnabled          Boolean  @default(false)
+  proposalFooter      String?  @db.Text
+  primaryColor        String?  @default("#1a1a2e")
+  accentColor         String?  @default("#e94560")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  users         User[]
+  customers     Customer[]
+  services      Service[]
+  estimates     Estimate[]
+  warrantyRules WarrantyRule[]
+}
+
+// ─────────────────────────────────────────────
+// Services & Pricing
+// ─────────────────────────────────────────────
+
+model Service {
+  id               String          @id @default(cuid())
+  companyId        String
+  company          Company         @relation(fields: [companyId], references: [id])
+  name             String
+  description      String?         @db.Text
+  category         ServiceCategory
+  pricingType      PricingType
+  basePrice        Float
+  minCharge        Float           @default(0)
+  materialCost     Float?
+  laborCost        Float?
+  marginTarget     Float?          @default(40)
+  defaultWarranty  String?         @db.Text
+  requiredQuestions Json?
+  optionalUpgrades  Json?
+  commonExclusions  Json?
+  isActive         Boolean         @default(true)
+  sortOrder        Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  estimateLineItems EstimateLineItem[]
+}
+
+enum ServiceCategory {
+  EPOXY_GARAGE
+  POLYASPARTIC
+  FULL_FLAKE
+  METALLIC_EPOXY
+  POLISHED_CONCRETE
+  COMMERCIAL
+  WATERPROOF_DECK
+  VUBA_STONE
+  CONCRETE_REPAIR
+  CRACK_REPAIR
+  STEM_WALL
+  COATING_REMOVAL
+  MOISTURE_MITIGATION
+  OTHER
+}
+
+enum PricingType {
+  PER_SQFT
+  PER_LINEAR_FT
+  FLAT_FEE
+  HOURLY
+  CUSTOM
+}
+
+model WarrantyRule {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  name         String
+  condition    String   @db.Text
+  warrantyText String   @db.Text
+  isDefault    Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// Customers & Projects
+// ─────────────────────────────────────────────
+
+model Customer {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id])
+  name           String
+  email          String?
+  phone          String?
+  projectAddress String?
+  city           String?
+  state          String?
+  zip            String?
+  billingAddress String?
+  leadSource     String?
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  projects Project[]
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  customerId    String
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  name          String
+  projectType   ProjectType   @default(RESIDENTIAL)
+  address       String?
+  city          String?
+  state         String?
+  zip           String?
+  accessNotes   String?       @db.Text
+  internalNotes String?       @db.Text
+  status        ProjectStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  estimates Estimate[]
+  photos    Photo[]
+}
+
+enum ProjectType {
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+// ─────────────────────────────────────────────
+// Estimates
+// ─────────────────────────────────────────────
+
+model Estimate {
+  id             String         @id @default(cuid())
+  companyId      String
+  company        Company        @relation(fields: [companyId], references: [id])
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id])
+  createdById    String
+  createdBy      User           @relation(fields: [createdById], references: [id])
+  estimateNumber String         @unique
+  status         EstimateStatus @default(DRAFT)
+
+  squareFootage     Float?
+  linearFootage     Float?
+  existingCoating   Boolean @default(false)
+  crackRepairNeeded Boolean @default(false)
+  surfaceCondition  String?
+  moistureConcerns  Boolean @default(false)
+  colorSelection    String?
+  requestedTimeline String?
+
+  aiInputText            String? @db.Text
+  aiParsedData           Json?
+  aiSuggestions          Json?
+  clarificationQuestions Json?
+  clarificationAnswers   Json?
+
+  subtotal        Float @default(0)
+  discountAmount  Float @default(0)
+  discountPercent Float @default(0)
+  taxAmount       Float @default(0)
+  totalAmount     Float @default(0)
+  depositAmount   Float @default(0)
+  balanceDue      Float @default(0)
+  estimatedCost   Float @default(0)
+  estimatedMargin Float @default(0)
+
+  proposalTitle    String?
+  scopeOfWork      String? @db.Text
+  prepSteps        String? @db.Text
+  productsIncluded String? @db.Text
+  warrantyText     String? @db.Text
+  exclusions       String? @db.Text
+  internalNotes    String? @db.Text
+
+  sentAt    DateTime?
+  viewedAt  DateTime?
+  acceptedAt DateTime?
+
+  stripePaymentIntentId String?
+  stripeDepositLinkId   String?
+
+  validUntil DateTime?
+  version    Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lineItems EstimateLineItem[]
+  proposal  Proposal?
+  signature Signature?
+  payments  Payment[]
+  photos    Photo[]
+  notes     Note[]
+}
+
+enum EstimateStatus {
+  DRAFT
+  NEEDS_CLARIFICATION
+  READY_FOR_REVIEW
+  SENT
+  VIEWED
+  ACCEPTED
+  DEPOSIT_PAID
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  BALANCE_DUE
+  PAID_IN_FULL
+  LOST
+}
+
+model EstimateLineItem {
+  id          String   @id @default(cuid())
+  estimateId  String
+  estimate    Estimate @relation(fields: [estimateId], references: [id])
+  serviceId   String?
+  service     Service? @relation(fields: [serviceId], references: [id])
+  description String
+  quantity    Float    @default(1)
+  unit        String?
+  unitPrice   Float
+  totalPrice  Float
+  cost        Float?
+  isOptional  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────
+// Proposals
+// ─────────────────────────────────────────────
+
+model Proposal {
+  id           String         @id @default(cuid())
+  estimateId   String         @unique
+  estimate     Estimate       @relation(fields: [estimateId], references: [id])
+  publicToken  String         @unique @default(cuid())
+  pdfUrl       String?
+  status       ProposalStatus @default(DRAFT)
+  viewCount    Int            @default(0)
+  lastViewedAt DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  EXPIRED
+}
+
+model Signature {
+  id              String   @id @default(cuid())
+  estimateId      String   @unique
+  estimate        Estimate @relation(fields: [estimateId], references: [id])
+  signerName      String
+  signatureData   String   @db.Text
+  ipAddress       String?
+  userAgent       String?
+  signedAt        DateTime @default(now())
+  estimateVersion Int
+  termsAccepted   Boolean  @default(false)
+}
+
+// ─────────────────────────────────────────────
+// Payments
+// ─────────────────────────────────────────────
+
+model Payment {
+  id                    String        @id @default(cuid())
+  estimateId            String
+  estimate              Estimate      @relation(fields: [estimateId], references: [id])
+  stripePaymentIntentId String?
+  stripeSessionId       String?
+  amount                Float
+  type                  PaymentType
+  status                PaymentStatus @default(PENDING)
+  paidAt                DateTime?
+  receiptUrl            String?
+  createdAt             DateTime      @default(now())
+}
+
+enum PaymentType {
+  DEPOSIT
+  BALANCE
+  FULL
+  CUSTOM
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// ─────────────────────────────────────────────
+// Photos & Notes
+// ─────────────────────────────────────────────
+
+model Photo {
+  id         String    @id @default(cuid())
+  estimateId String?
+  estimate   Estimate? @relation(fields: [estimateId], references: [id])
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id])
+  url        String
+  key        String?
+  caption    String?
+  photoType  PhotoType @default(GENERAL)
+  aiAnalysis String?   @db.Text
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
+}
+
+enum PhotoType {
+  GENERAL
+  BEFORE
+  AFTER
+  PROBLEM_AREA
+  PROPOSAL_VISIBLE
+  INTERNAL_ONLY
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id])
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  content    String   @db.Text
+  isInternal Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  template  String
+  status    String
+  messageId String?
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  entityType String
+  entityId   String
+  action     String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+}
