@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Camera, Loader2, Trash2, Image as ImageIcon } from "lucide-react";
+import { Camera, Loader2, Trash2, Image as ImageIcon, Pencil, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
@@ -38,6 +38,20 @@ export function PhotoUpload({ estimateId, photos, onUpdate }: PhotoUploadProps) 
   const [uploading, setUploading] = useState(false);
   const [selectedType, setSelectedType] = useState("GENERAL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingCaptionId, setEditingCaptionId] = useState<string | null>(null);
+  const [captionDraft, setCaptionDraft] = useState("");
+
+  async function saveCaption(photoId: string) {
+    const res = await fetch(`/api/estimates/${estimateId}/photos/${photoId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caption: captionDraft }),
+    });
+    if (res.ok) {
+      onUpdate(photos.map((p) => (p.id === photoId ? { ...p, caption: captionDraft } : p)));
+    }
+    setEditingCaptionId(null);
+  }
 
   async function handleDelete(photoId: string) {
     setDeletingId(photoId);
@@ -155,19 +169,53 @@ export function PhotoUpload({ estimateId, photos, onUpdate }: PhotoUploadProps) 
                   unoptimized
                 />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1.5 flex items-center justify-between">
-                <span>{typeLabel(photo.photoType)}</span>
-                <button
-                  onClick={() => handleDelete(photo.id)}
-                  disabled={deletingId === photo.id}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-red-300 hover:text-red-200 ml-2"
-                >
-                  {deletingId === photo.id ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
-                  )}
-                </button>
+              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1.5">
+                {editingCaptionId === photo.id ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      value={captionDraft}
+                      onChange={(e) => setCaptionDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveCaption(photo.id); if (e.key === "Escape") setEditingCaptionId(null); }}
+                      className="flex-1 bg-transparent outline-none text-xs min-w-0"
+                      placeholder="Add caption..."
+                    />
+                    <button onClick={() => saveCaption(photo.id)} className="shrink-0 text-green-300 hover:text-green-200">
+                      <Check className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => setEditingCaptionId(null)} className="shrink-0 text-slate-300 hover:text-white">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="truncate cursor-pointer hover:text-blue-300 flex-1"
+                      onClick={() => { setEditingCaptionId(photo.id); setCaptionDraft(photo.caption || ""); }}
+                    >
+                      {photo.caption || typeLabel(photo.photoType)}
+                    </span>
+                    <div className="flex gap-1 ml-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        onClick={() => { setEditingCaptionId(photo.id); setCaptionDraft(photo.caption || ""); }}
+                        className="text-blue-300 hover:text-blue-200"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(photo.id)}
+                        disabled={deletingId === photo.id}
+                        className="text-red-300 hover:text-red-200"
+                      >
+                        {deletingId === photo.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
