@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   FileText,
@@ -25,17 +22,24 @@ import {
   Edit3,
   Save,
   Plus,
-  Trash2,
+  Camera,
+  MessageSquare,
+  StickyNote,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   formatCurrency,
   formatDate,
   ESTIMATE_STATUS_LABELS,
   ESTIMATE_STATUS_COLORS,
-  calculateEstimateTotals,
 } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { ProposalPreview } from "./proposal-preview";
+import { AddLineItemDialog } from "./add-line-item-dialog";
+import { AIChat } from "./ai-chat";
+import { EstimateNotes } from "./estimate-notes";
+import { PhotoUpload } from "./photo-upload";
 
 interface EstimateDetailProps {
   estimate: any;
@@ -43,15 +47,30 @@ interface EstimateDetailProps {
 }
 
 export function EstimateDetail({ estimate: initialEstimate, services }: EstimateDetailProps) {
-  const router = useRouter();
   const { toast } = useToast();
   const [estimate, setEstimate] = useState(initialEstimate);
   const [loading, setLoading] = useState(false);
   const [generatingProposal, setGeneratingProposal] = useState(false);
   const [editingLine, setEditingLine] = useState<string | null>(null);
   const [lineEdits, setLineEdits] = useState<Record<string, any>>({});
+  const [addLineOpen, setAddLineOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [notes, setNotes] = useState(initialEstimate.notes || []);
+  const [photos, setPhotos] = useState(initialEstimate.photos || []);
 
   const aiSuggestions = estimate.aiSuggestions as any;
+
+  const proposalLink = estimate.proposal?.publicToken
+    ? `${process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "")}/proposal/${estimate.proposal.publicToken}`
+    : null;
+
+  async function copyProposalLink() {
+    if (!proposalLink) return;
+    await navigator.clipboard.writeText(proposalLink);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+    toast({ title: "Link copied!" });
+  }
 
   async function updateStatus(status: string) {
     setLoading(true);
@@ -80,7 +99,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       });
       if (!res.ok) throw new Error("Failed to generate");
       const updated = await res.json();
-      setEstimate((e: any) => ({ ...e, ...updated }));
+      setEstimate(updated);
       toast({ title: "Proposal generated!", description: "Review and send to customer." });
     } catch {
       toast({ title: "Error", description: "Failed to generate proposal", variant: "destructive" });
@@ -95,8 +114,14 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       const res = await fetch(`/api/estimates/${estimate.id}/send`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to send");
       const updated = await res.json();
-      setEstimate((e: any) => ({ ...e, ...updated }));
-      toast({ title: "Proposal sent!", description: "Customer has been notified." });
+      setEstimate(updated);
+      const hasEmail = estimate.project?.customer?.email;
+      toast({
+        title: "Proposal sent!",
+        description: hasEmail
+          ? "Email sent to customer."
+          : "Proposal link is ready — share with customer.",
+      });
     } catch {
       toast({ title: "Error", description: "Failed to send proposal", variant: "destructive" });
     } finally {
@@ -113,11 +138,19 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
     const newTotal = newQty * newPrice;
 
     try {
-      const res = await fetch(`/api/estimates/${estimate.id}/line-items/${lineItemId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...edits, quantity: newQty, unitPrice: newPrice, totalPrice: newTotal }),
-      });
+      const res = await fetch(
+        `/api/estimates/${estimate.id}/line-items/${lineItemId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...edits,
+            quantity: newQty,
+            unitPrice: newPrice,
+            totalPrice: newTotal,
+          }),
+        }
+      );
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();
       setEstimate(updated);
@@ -127,10 +160,6 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to save", variant: "destructive" });
     }
   }
-
-  const proposalLink = estimate.proposal?.publicToken
-    ? `${process.env.NEXT_PUBLIC_APP_URL || ""}/proposal/${estimate.proposal.publicToken}`
-    : null;
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -142,30 +171,54 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
               <ArrowLeft className="w-4 h-4 mr-1" /> Estimates
             </Link>
           </Button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-slate-900">
               {estimate.project.customer.name}
             </h1>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTIMATE_STATUS_COLORS[estimate.status]}`}>
+            <span
+              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                ESTIMATE_STATUS_COLORS[estimate.status]
+              }`}
+            >
               {ESTIMATE_STATUS_LABELS[estimate.status]}
             </span>
           </div>
-          <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+          <div className="flex items-center gap-3 mt-1 text-sm text-slate-500 flex-wrap">
             <span>{estimate.estimateNumber}</span>
             <span>·</span>
             <span>{formatDate(estimate.createdAt)}</span>
             {estimate.project.customer.phone && (
               <>
                 <span>·</span>
-                <span>{estimate.project.customer.phone}</span>
+                <a
+                  href={`tel:${estimate.project.customer.phone}`}
+                  className="hover:text-blue-600 hover:underline"
+                >
+                  {estimate.project.customer.phone}
+                </a>
+              </>
+            )}
+            {estimate.project.customer.email && (
+              <>
+                <span>·</span>
+                <a
+                  href={`mailto:${estimate.project.customer.email}`}
+                  className="hover:text-blue-600 hover:underline"
+                >
+                  {estimate.project.customer.email}
+                </a>
               </>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {estimate.status === "READY_FOR_REVIEW" && !estimate.scopeOfWork && (
-            <Button onClick={generateProposal} disabled={generatingProposal} variant="outline">
+            <Button
+              onClick={generateProposal}
+              disabled={generatingProposal}
+              variant="outline"
+            >
               {generatingProposal ? (
                 <><Loader2 className="mr-2 w-4 h-4 animate-spin" /> Generating...</>
               ) : (
@@ -173,9 +226,19 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
               )}
             </Button>
           )}
-          {estimate.scopeOfWork && estimate.status !== "SENT" && estimate.status !== "ACCEPTED" && (
-            <Button onClick={sendProposal} disabled={loading}>
-              <Send className="mr-2 w-4 h-4" /> Send to Customer
+          {estimate.scopeOfWork &&
+            !["SENT", "VIEWED", "ACCEPTED", "DEPOSIT_PAID"].includes(estimate.status) && (
+              <Button onClick={sendProposal} disabled={loading}>
+                <Send className="mr-2 w-4 h-4" /> Send to Customer
+              </Button>
+            )}
+          {proposalLink && (
+            <Button variant="outline" onClick={copyProposalLink}>
+              {copiedLink ? (
+                <><Check className="mr-2 w-4 h-4 text-green-600" /> Copied!</>
+              ) : (
+                <><Copy className="mr-2 w-4 h-4" /> Copy Link</>
+              )}
             </Button>
           )}
           {proposalLink && (
@@ -196,14 +259,16 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
           </div>
           <ul className="space-y-1">
             {aiSuggestions.warnings.map((w: string, i: number) => (
-              <li key={i} className="text-sm text-orange-700">• {w}</li>
+              <li key={i} className="text-sm text-orange-700">
+                • {w}
+              </li>
             ))}
           </ul>
         </div>
       )}
 
       <Tabs defaultValue="estimate">
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 flex-wrap h-auto">
           <TabsTrigger value="estimate">
             <FileText className="w-4 h-4 mr-1.5" /> Estimate
           </TabsTrigger>
@@ -212,6 +277,25 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
           </TabsTrigger>
           <TabsTrigger value="payment">
             <DollarSign className="w-4 h-4 mr-1.5" /> Payment
+          </TabsTrigger>
+          <TabsTrigger value="photos">
+            <Camera className="w-4 h-4 mr-1.5" /> Photos
+            {photos.length > 0 && (
+              <span className="ml-1 text-xs bg-slate-200 text-slate-700 rounded-full px-1.5">
+                {photos.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="notes">
+            <StickyNote className="w-4 h-4 mr-1.5" /> Notes
+            {notes.length > 0 && (
+              <span className="ml-1 text-xs bg-slate-200 text-slate-700 rounded-full px-1.5">
+                {notes.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="ai">
+            <Sparkles className="w-4 h-4 mr-1.5" /> AI Assistant
           </TabsTrigger>
         </TabsList>
 
@@ -223,28 +307,49 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between py-4">
                   <CardTitle className="text-base">Line Items</CardTitle>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAddLineOpen(true)}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Item
+                  </Button>
                 </CardHeader>
                 <CardContent className="p-0">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-slate-50">
-                        <th className="text-left p-3 font-medium text-slate-600">Description</th>
+                        <th className="text-left p-3 font-medium text-slate-600">
+                          Description
+                        </th>
                         <th className="text-right p-3 font-medium text-slate-600">Qty</th>
-                        <th className="text-right p-3 font-medium text-slate-600">Unit</th>
-                        <th className="text-right p-3 font-medium text-slate-600">Price</th>
+                        <th className="text-right p-3 font-medium text-slate-600 hidden sm:table-cell">
+                          Unit
+                        </th>
+                        <th className="text-right p-3 font-medium text-slate-600 hidden sm:table-cell">
+                          Price
+                        </th>
                         <th className="text-right p-3 font-medium text-slate-600">Total</th>
-                        <th className="w-16" />
+                        <th className="w-10" />
                       </tr>
                     </thead>
                     <tbody>
                       {estimate.lineItems.map((item: any) => (
-                        <tr key={item.id} className="border-b last:border-0 hover:bg-slate-50">
+                        <tr
+                          key={item.id}
+                          className="border-b last:border-0 hover:bg-slate-50"
+                        >
                           {editingLine === item.id ? (
                             <>
                               <td className="p-2">
                                 <Input
                                   value={lineEdits[item.id]?.description ?? item.description}
-                                  onChange={(e) => setLineEdits((p) => ({ ...p, [item.id]: { ...p[item.id], description: e.target.value } }))}
+                                  onChange={(e) =>
+                                    setLineEdits((p) => ({
+                                      ...p,
+                                      [item.id]: { ...p[item.id], description: e.target.value },
+                                    }))
+                                  }
                                   className="h-8 text-sm"
                                 />
                               </td>
@@ -252,24 +357,43 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                                 <Input
                                   type="number"
                                   value={lineEdits[item.id]?.quantity ?? item.quantity}
-                                  onChange={(e) => setLineEdits((p) => ({ ...p, [item.id]: { ...p[item.id], quantity: e.target.value } }))}
+                                  onChange={(e) =>
+                                    setLineEdits((p) => ({
+                                      ...p,
+                                      [item.id]: { ...p[item.id], quantity: e.target.value },
+                                    }))
+                                  }
                                   className="h-8 text-sm w-20 text-right ml-auto"
                                 />
                               </td>
-                              <td className="p-2 text-right text-slate-500">{item.unit}</td>
-                              <td className="p-2 text-right">
+                              <td className="p-2 text-right text-slate-500 hidden sm:table-cell">
+                                {item.unit}
+                              </td>
+                              <td className="p-2 text-right hidden sm:table-cell">
                                 <Input
                                   type="number"
                                   value={lineEdits[item.id]?.unitPrice ?? item.unitPrice}
-                                  onChange={(e) => setLineEdits((p) => ({ ...p, [item.id]: { ...p[item.id], unitPrice: e.target.value } }))}
+                                  onChange={(e) =>
+                                    setLineEdits((p) => ({
+                                      ...p,
+                                      [item.id]: { ...p[item.id], unitPrice: e.target.value },
+                                    }))
+                                  }
                                   className="h-8 text-sm w-24 text-right ml-auto"
                                 />
                               </td>
                               <td className="p-3 text-right font-medium">
-                                {formatCurrency((lineEdits[item.id]?.quantity ?? item.quantity) * (lineEdits[item.id]?.unitPrice ?? item.unitPrice))}
+                                {formatCurrency(
+                                  (lineEdits[item.id]?.quantity ?? item.quantity) *
+                                    (lineEdits[item.id]?.unitPrice ?? item.unitPrice)
+                                )}
                               </td>
                               <td className="p-2">
-                                <Button size="sm" variant="ghost" onClick={() => saveLineItem(item.id)}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => saveLineItem(item.id)}
+                                >
                                   <Save className="w-3 h-3" />
                                 </Button>
                               </td>
@@ -277,24 +401,44 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                           ) : (
                             <>
                               <td className="p-3">
-                                <span className={item.isOptional ? "text-slate-400" : "text-slate-900"}>
+                                <span
+                                  className={
+                                    item.isOptional ? "text-slate-400" : "text-slate-900"
+                                  }
+                                >
                                   {item.description}
                                 </span>
                                 {item.isOptional && (
-                                  <Badge variant="outline" className="ml-2 text-xs">Optional</Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className="ml-2 text-xs"
+                                  >
+                                    Optional
+                                  </Badge>
                                 )}
                               </td>
-                              <td className="p-3 text-right text-slate-600">{item.quantity.toLocaleString()}</td>
-                              <td className="p-3 text-right text-slate-500">{item.unit}</td>
-                              <td className="p-3 text-right text-slate-600">{formatCurrency(item.unitPrice)}</td>
-                              <td className="p-3 text-right font-medium">{formatCurrency(item.totalPrice)}</td>
+                              <td className="p-3 text-right text-slate-600">
+                                {item.quantity.toLocaleString()}
+                              </td>
+                              <td className="p-3 text-right text-slate-500 hidden sm:table-cell">
+                                {item.unit}
+                              </td>
+                              <td className="p-3 text-right text-slate-600 hidden sm:table-cell">
+                                {formatCurrency(item.unitPrice)}
+                              </td>
+                              <td className="p-3 text-right font-medium">
+                                {formatCurrency(item.totalPrice)}
+                              </td>
                               <td className="p-2">
                                 <Button
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => {
                                     setEditingLine(item.id);
-                                    setLineEdits((p) => ({ ...p, [item.id]: { ...item } }));
+                                    setLineEdits((p) => ({
+                                      ...p,
+                                      [item.id]: { ...item },
+                                    }));
                                   }}
                                 >
                                   <Edit3 className="w-3 h-3" />
@@ -318,7 +462,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                   {estimate.squareFootage && (
                     <div>
                       <p className="text-slate-500">Square Footage</p>
-                      <p className="font-medium">{estimate.squareFootage.toLocaleString()} sq ft</p>
+                      <p className="font-medium">
+                        {estimate.squareFootage.toLocaleString()} sq ft
+                      </p>
                     </div>
                   )}
                   {estimate.colorSelection && (
@@ -334,18 +480,35 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                     </div>
                   )}
                   <div>
-                    <p className="text-slate-500">Surface Conditions</p>
+                    <p className="text-slate-500">Conditions</p>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {estimate.existingCoating && <Badge variant="secondary" className="text-xs">Existing Coating</Badge>}
-                      {estimate.crackRepairNeeded && <Badge variant="secondary" className="text-xs">Crack Repair</Badge>}
-                      {estimate.moistureConcerns && <Badge variant="destructive" className="text-xs">Moisture Concern</Badge>}
+                      {estimate.existingCoating && (
+                        <Badge variant="secondary" className="text-xs">
+                          Existing Coating
+                        </Badge>
+                      )}
+                      {estimate.crackRepairNeeded && (
+                        <Badge variant="secondary" className="text-xs">
+                          Crack Repair
+                        </Badge>
+                      )}
+                      {estimate.moistureConcerns && (
+                        <Badge variant="destructive" className="text-xs">
+                          Moisture Concern
+                        </Badge>
+                      )}
+                      {!estimate.existingCoating &&
+                        !estimate.crackRepairNeeded &&
+                        !estimate.moistureConcerns && (
+                          <span className="text-slate-400 text-xs">Standard conditions</span>
+                        )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Totals Sidebar */}
+            {/* Sidebar */}
             <div className="space-y-4">
               <Card>
                 <CardHeader className="py-4">
@@ -376,7 +539,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                   <Separator />
                   <div className="flex justify-between text-blue-600">
                     <span>Deposit (50%)</span>
-                    <span className="font-medium">{formatCurrency(estimate.depositAmount)}</span>
+                    <span className="font-medium">
+                      {formatCurrency(estimate.depositAmount)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Balance Due</span>
@@ -386,19 +551,45 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
               </Card>
 
               {estimate.estimatedMargin > 0 && (
-                <Card className={estimate.estimatedMargin < 30 ? "border-orange-200 bg-orange-50" : "border-green-200 bg-green-50"}>
+                <Card
+                  className={
+                    estimate.estimatedMargin < 30
+                      ? "border-orange-200 bg-orange-50"
+                      : "border-green-200 bg-green-50"
+                  }
+                >
                   <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className={`w-4 h-4 ${estimate.estimatedMargin < 30 ? "text-orange-600" : "text-green-600"}`} />
-                      <span className={`text-sm font-medium ${estimate.estimatedMargin < 30 ? "text-orange-700" : "text-green-700"}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp
+                        className={`w-4 h-4 ${
+                          estimate.estimatedMargin < 30
+                            ? "text-orange-600"
+                            : "text-green-600"
+                        }`}
+                      />
+                      <span
+                        className={`text-sm font-medium ${
+                          estimate.estimatedMargin < 30
+                            ? "text-orange-700"
+                            : "text-green-700"
+                        }`}
+                      >
                         Gross Margin
                       </span>
                     </div>
-                    <p className={`text-2xl font-bold ${estimate.estimatedMargin < 30 ? "text-orange-700" : "text-green-700"}`}>
+                    <p
+                      className={`text-2xl font-bold ${
+                        estimate.estimatedMargin < 30
+                          ? "text-orange-700"
+                          : "text-green-700"
+                      }`}
+                    >
                       {estimate.estimatedMargin.toFixed(1)}%
                     </p>
                     {estimate.estimatedMargin < 30 && (
-                      <p className="text-xs text-orange-600 mt-1">Below target margin — review pricing</p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Below target — review pricing
+                      </p>
                     )}
                   </CardContent>
                 </Card>
@@ -415,7 +606,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                   <CardContent className="pt-0 pb-3">
                     <ul className="space-y-1">
                       {aiSuggestions.upsells.map((u: string, i: number) => (
-                        <li key={i} className="text-xs text-blue-700">• {u}</li>
+                        <li key={i} className="text-xs text-blue-700">
+                          • {u}
+                        </li>
                       ))}
                     </ul>
                   </CardContent>
@@ -427,30 +620,92 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 <CardContent className="pt-4 pb-4 space-y-2">
                   <p className="text-xs font-medium text-slate-500 mb-3">Update Status</p>
                   {estimate.status === "DRAFT" && (
-                    <Button size="sm" className="w-full" onClick={() => updateStatus("READY_FOR_REVIEW")}>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => updateStatus("READY_FOR_REVIEW")}
+                      disabled={loading}
+                    >
                       <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Mark Ready
                     </Button>
                   )}
                   {estimate.status === "NEEDS_CLARIFICATION" && (
-                    <Button size="sm" className="w-full" onClick={() => updateStatus("READY_FOR_REVIEW")}>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => updateStatus("READY_FOR_REVIEW")}
+                      disabled={loading}
+                    >
                       Mark Ready for Review
                     </Button>
                   )}
+                  {["SENT", "VIEWED"].includes(estimate.status) && (
+                    <Button
+                      size="sm"
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      onClick={() => updateStatus("ACCEPTED")}
+                      disabled={loading}
+                    >
+                      Mark Accepted
+                    </Button>
+                  )}
                   {estimate.status === "ACCEPTED" && (
-                    <Button size="sm" className="w-full bg-green-600 hover:bg-green-700" onClick={() => updateStatus("DEPOSIT_PAID")}>
+                    <Button
+                      size="sm"
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={() => updateStatus("DEPOSIT_PAID")}
+                      disabled={loading}
+                    >
                       Mark Deposit Paid
                     </Button>
                   )}
+                  {estimate.status === "DEPOSIT_PAID" && (
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => updateStatus("SCHEDULED")}
+                      disabled={loading}
+                    >
+                      Mark Scheduled
+                    </Button>
+                  )}
+                  {estimate.status === "SCHEDULED" && (
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => updateStatus("IN_PROGRESS")}
+                      disabled={loading}
+                    >
+                      Mark In Progress
+                    </Button>
+                  )}
                   {estimate.status === "IN_PROGRESS" && (
-                    <Button size="sm" className="w-full" onClick={() => updateStatus("COMPLETED")}>
+                    <Button
+                      size="sm"
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      onClick={() => updateStatus("COMPLETED")}
+                      disabled={loading}
+                    >
                       Mark Completed
                     </Button>
                   )}
+                  {estimate.status === "COMPLETED" && (
+                    <Button
+                      size="sm"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
+                      onClick={() => updateStatus("PAID_IN_FULL")}
+                      disabled={loading}
+                    >
+                      Mark Paid in Full
+                    </Button>
+                  )}
+                  <Separator />
                   <Button
                     size="sm"
                     variant="outline"
                     className="w-full text-red-600 border-red-200 hover:bg-red-50"
                     onClick={() => updateStatus("LOST")}
+                    disabled={loading}
                   >
                     Mark as Lost
                   </Button>
@@ -462,19 +717,79 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
 
         {/* Proposal Tab */}
         <TabsContent value="proposal">
-          <ProposalPreview estimate={estimate} onGenerate={generateProposal} generating={generatingProposal} />
+          <ProposalPreview
+            estimate={estimate}
+            onGenerate={generateProposal}
+            generating={generatingProposal}
+          />
         </TabsContent>
 
         {/* Payment Tab */}
         <TabsContent value="payment">
           <PaymentTab estimate={estimate} onUpdate={setEstimate} />
         </TabsContent>
+
+        {/* Photos Tab */}
+        <TabsContent value="photos">
+          <Card>
+            <CardHeader className="py-4">
+              <CardTitle className="text-base">Project Photos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PhotoUpload
+                estimateId={estimate.id}
+                photos={photos}
+                onUpdate={setPhotos}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notes Tab */}
+        <TabsContent value="notes">
+          <Card>
+            <CardHeader className="py-4">
+              <CardTitle className="text-base">Internal Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EstimateNotes
+                estimateId={estimate.id}
+                notes={notes}
+                onNoteAdded={(note) => setNotes((n: any) => [note, ...n])}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AI Assistant Tab */}
+        <TabsContent value="ai">
+          <Card>
+            <CardContent className="p-0">
+              <AIChat estimateId={estimate.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Add Line Item Dialog */}
+      <AddLineItemDialog
+        estimateId={estimate.id}
+        services={services}
+        open={addLineOpen}
+        onClose={() => setAddLineOpen(false)}
+        onAdded={setEstimate}
+      />
     </div>
   );
 }
 
-function PaymentTab({ estimate, onUpdate }: { estimate: any; onUpdate: (e: any) => void }) {
+function PaymentTab({
+  estimate,
+  onUpdate,
+}: {
+  estimate: any;
+  onUpdate: (e: any) => void;
+}) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -488,18 +803,32 @@ function PaymentTab({ estimate, onUpdate }: { estimate: any; onUpdate: (e: any) 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      onUpdate((e: any) => ({ ...e, ...data.estimate }));
-      toast({ title: "Payment link created", description: "Link has been generated." });
       if (data.url) window.open(data.url, "_blank");
+      toast({ title: "Payment link created" });
     } catch {
-      toast({ title: "Error", description: "Failed to create payment link", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to create payment link",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   }
 
-  const paidPayments = estimate.payments?.filter((p: any) => p.status === "PAID") || [];
-  const totalPaid = paidPayments.reduce((sum: number, p: any) => sum + p.amount, 0);
+  const paidPayments =
+    estimate.payments?.filter((p: any) => p.status === "PAID") || [];
+  const totalPaid = paidPayments.reduce(
+    (sum: number, p: any) => sum + p.amount,
+    0
+  );
+
+  const canCreateLink = [
+    "ACCEPTED",
+    "SENT",
+    "VIEWED",
+    "DEPOSIT_PAID",
+  ].includes(estimate.status);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -515,7 +844,9 @@ function PaymentTab({ estimate, onUpdate }: { estimate: any; onUpdate: (e: any) 
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600">Deposit (50%)</span>
-              <span className="font-semibold text-blue-600">{formatCurrency(estimate.depositAmount)}</span>
+              <span className="font-semibold text-blue-600">
+                {formatCurrency(estimate.depositAmount)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600">Balance</span>
@@ -534,19 +865,14 @@ function PaymentTab({ estimate, onUpdate }: { estimate: any; onUpdate: (e: any) 
           <Button
             className="w-full"
             onClick={() => createPaymentLink("DEPOSIT")}
-            disabled={loading || !["ACCEPTED", "SENT", "VIEWED"].includes(estimate.status)}
+            disabled={loading || !canCreateLink}
           >
-            {loading ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : <DollarSign className="mr-2 w-4 h-4" />}
-            Generate Deposit Link ({formatCurrency(estimate.depositAmount)})
-          </Button>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => createPaymentLink("FULL")}
-            disabled={loading}
-          >
-            Generate Full Payment Link ({formatCurrency(estimate.totalAmount)})
+            {loading ? (
+              <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+            ) : (
+              <DollarSign className="mr-2 w-4 h-4" />
+            )}
+            Deposit Link — {formatCurrency(estimate.depositAmount)}
           </Button>
 
           <Button
@@ -555,10 +881,19 @@ function PaymentTab({ estimate, onUpdate }: { estimate: any; onUpdate: (e: any) 
             onClick={() => createPaymentLink("BALANCE")}
             disabled={loading}
           >
-            Generate Balance Link ({formatCurrency(estimate.balanceDue)})
+            Balance Link — {formatCurrency(estimate.balanceDue)}
           </Button>
 
-          {!["ACCEPTED", "SENT", "VIEWED"].includes(estimate.status) && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => createPaymentLink("FULL")}
+            disabled={loading}
+          >
+            Full Payment — {formatCurrency(estimate.totalAmount)}
+          </Button>
+
+          {!canCreateLink && (
             <p className="text-xs text-slate-500 text-center">
               Estimate must be sent or accepted to generate payment links
             </p>
@@ -576,14 +911,25 @@ function PaymentTab({ estimate, onUpdate }: { estimate: any; onUpdate: (e: any) 
           ) : (
             <div className="space-y-3">
               {estimate.payments.map((p: any) => (
-                <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg text-sm">
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-3 border rounded-lg text-sm"
+                >
                   <div>
-                    <p className="font-medium capitalize">{p.type.toLowerCase()} Payment</p>
+                    <p className="font-medium capitalize">
+                      {p.type.toLowerCase()} Payment
+                    </p>
                     <p className="text-xs text-slate-500">{formatDate(p.createdAt)}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">{formatCurrency(p.amount)}</p>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${p.status === "PAID" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
+                    <span
+                      className={`text-xs px-1.5 py-0.5 rounded-full ${
+                        p.status === "PAID"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
                       {p.status}
                     </span>
                   </div>
