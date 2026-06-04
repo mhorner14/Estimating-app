@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Save, Building2, DollarSign, FileText } from "lucide-react";
+import { Loader2, Save, Building2, DollarSign, FileText, ImageIcon, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Company } from "@prisma/client";
 
@@ -37,7 +37,9 @@ export function CompanySettings({ company }: Props) {
     taxRate: company?.taxRate?.toString() || "0",
     taxEnabled: company?.taxEnabled || false,
     proposalFooter: company?.proposalFooter || "",
+    logo: company?.logo || "",
   });
+  const [logoPreview, setLogoPreview] = useState<string | null>(company?.logo || null);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value, type } = e.target;
@@ -80,6 +82,56 @@ export function CompanySettings({ company }: Props) {
         <Card>
           <CardHeader><CardTitle className="text-base">Company Information</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {/* Logo */}
+            <div className="space-y-2">
+              <Label>Company Logo</Label>
+              <div className="flex items-center gap-4">
+                {logoPreview ? (
+                  <div className="w-20 h-20 border border-slate-200 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+                    <img src={logoPreview} alt="Logo" className="max-w-full max-h-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center bg-slate-50">
+                    <ImageIcon className="w-8 h-8 text-slate-300" />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const dataUrl = ev.target?.result as string;
+                          setLogoPreview(dataUrl);
+                          setForm((f) => ({ ...f, logo: dataUrl }));
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    <div className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-md text-sm text-slate-600 hover:bg-slate-50 cursor-pointer">
+                      <Upload className="w-3.5 h-3.5" />
+                      Upload Logo
+                    </div>
+                  </label>
+                  <p className="text-xs text-slate-500">PNG, JPG, SVG — shown on proposals</p>
+                  {logoPreview && (
+                    <button
+                      type="button"
+                      onClick={() => { setLogoPreview(null); setForm((f) => ({ ...f, logo: "" })); }}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Remove logo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
                 <Label>Company Name *</Label>

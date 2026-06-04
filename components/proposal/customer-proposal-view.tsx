@@ -164,9 +164,15 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-white" />
-                  </div>
+                  {company?.logo ? (
+                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-1 shrink-0">
+                      <img src={company.logo} alt={company.name} className="max-w-full max-h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+                      <Building2 className="w-6 h-6 text-white" />
+                    </div>
+                  )}
                   <div>
                     <p className="text-xl font-bold">{company?.name}</p>
                     {company?.licenseNumber && (

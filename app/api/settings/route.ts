@@ -12,6 +12,7 @@ export async function PATCH(req: NextRequest) {
   const updated = await prisma.company.update({
     where: { id: companyId },
     data: {
+      ...(body.logo !== undefined && { logo: body.logo }),
       name: body.name,
       phone: body.phone,
       email: body.email,
