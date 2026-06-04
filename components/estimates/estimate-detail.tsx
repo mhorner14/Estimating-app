@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -422,6 +422,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
           </TabsTrigger>
           <TabsTrigger value="ai">
             <Sparkles className="w-4 h-4 mr-1.5" /> AI Assistant
+          </TabsTrigger>
+          <TabsTrigger value="activity">
+            Activity
           </TabsTrigger>
         </TabsList>
 
@@ -979,6 +982,10 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="activity">
+          <ActivityFeed estimateId={estimate.id} />
+        </TabsContent>
       </Tabs>
 
       {/* Add Line Item Dialog */}
@@ -1233,5 +1240,60 @@ function PaymentTab({
       </Card>
       </div>
     </div>
+  );
+}
+
+function ActivityFeed({ estimateId }: { estimateId: string }) {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/estimates/${estimateId}/activity`)
+      .then((r) => r.json())
+      .then((d) => { setLogs(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [estimateId]);
+
+  function actionLabel(action: string, meta: any) {
+    if (action === "status_changed") {
+      return `Status changed from ${ESTIMATE_STATUS_LABELS[meta?.from] || meta?.from} → ${ESTIMATE_STATUS_LABELS[meta?.to] || meta?.to}`;
+    }
+    if (action === "payment_recorded") {
+      return `Payment recorded: ${meta?.type?.toLowerCase()} — $${Number(meta?.amount || 0).toFixed(2)}`;
+    }
+    return action.replace(/_/g, " ");
+  }
+
+  return (
+    <Card>
+      <CardHeader className="py-4">
+        <CardTitle className="text-base">Activity Log</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+          </div>
+        ) : logs.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-8">No activity recorded yet</p>
+        ) : (
+          <div className="space-y-3">
+            {logs.map((log) => (
+              <div key={log.id} className="flex items-start gap-3 text-sm">
+                <div className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-700">{actionLabel(log.action, log.metadata)}</p>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                    {log.user?.name && <span>{log.user.name}</span>}
+                    {log.user?.name && <span>·</span>}
+                    <span>{formatDate(log.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

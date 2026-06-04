@@ -8,6 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, X } from "lucide-react";
 import { formatCurrency, formatDate, ESTIMATE_STATUS_LABELS, ESTIMATE_STATUS_COLORS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Estimate {
   id: string;
@@ -44,9 +51,36 @@ const STATUS_OPTIONS = [
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
-export function EstimatesTable({ estimates }: EstimatesTableProps) {
+const ALL_STATUSES = [
+  "DRAFT","NEEDS_CLARIFICATION","READY_FOR_REVIEW","SENT","VIEWED",
+  "ACCEPTED","DEPOSIT_PAID","SCHEDULED","IN_PROGRESS","COMPLETED",
+  "BALANCE_DUE","PAID_IN_FULL","LOST",
+];
+
+export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
+  const { toast } = useToast();
+  const [estimates, setEstimates] = useState(initial);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  async function changeStatus(id: string, status: string) {
+    setUpdatingId(id);
+    try {
+      const res = await fetch(`/api/estimates/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error();
+      setEstimates((es) => es.map((e) => e.id === id ? { ...e, status } : e));
+      toast({ title: "Status updated" });
+    } catch {
+      toast({ title: "Error", description: "Failed to update", variant: "destructive" });
+    } finally {
+      setUpdatingId(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     return estimates.filter((e) => {
@@ -137,9 +171,28 @@ export function EstimatesTable({ estimates }: EstimatesTableProps) {
                     <td className="p-4 text-slate-600 text-sm">{formatDate(estimate.createdAt)}</td>
                     <td className="p-4 text-right font-semibold text-slate-900">{formatCurrency(estimate.totalAmount)}</td>
                     <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTIMATE_STATUS_COLORS[estimate.status as keyof typeof ESTIMATE_STATUS_COLORS]}`}>
-                        {ESTIMATE_STATUS_LABELS[estimate.status as keyof typeof ESTIMATE_STATUS_LABELS]}
-                      </span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${ESTIMATE_STATUS_COLORS[estimate.status as keyof typeof ESTIMATE_STATUS_COLORS]}`}
+                            disabled={updatingId === estimate.id}
+                          >
+                            {updatingId === estimate.id ? "..." : ESTIMATE_STATUS_LABELS[estimate.status as keyof typeof ESTIMATE_STATUS_LABELS]}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
+                          {ALL_STATUSES.map((s) => (
+                            <DropdownMenuItem
+                              key={s}
+                              onClick={() => changeStatus(estimate.id, s)}
+                              className={estimate.status === s ? "font-medium" : ""}
+                            >
+                              <span className={`w-2 h-2 rounded-full mr-2 shrink-0 ${ESTIMATE_STATUS_COLORS[s as keyof typeof ESTIMATE_STATUS_COLORS]?.replace("text-", "bg-").split(" ")[0]}`} />
+                              {ESTIMATE_STATUS_LABELS[s as keyof typeof ESTIMATE_STATUS_LABELS]}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
