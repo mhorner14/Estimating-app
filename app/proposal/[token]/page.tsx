@@ -15,6 +15,7 @@ export default async function CustomerProposalPage({ params }: { params: Promise
           signature: true,
           payments: true,
           company: true,
+          photos: { where: { photoType: "PROPOSAL_VISIBLE" }, orderBy: { createdAt: "asc" } },
         },
       },
     },

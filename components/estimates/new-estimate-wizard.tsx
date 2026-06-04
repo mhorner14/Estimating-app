@@ -38,16 +38,17 @@ interface AIResult {
 interface Props {
   customers: Customer[];
   services: Service[];
+  preselectedCustomerId?: string;
 }
 
-export function NewEstimateWizard({ customers, services }: Props) {
+export function NewEstimateWizard({ customers, services, preselectedCustomerId }: Props) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [step, setStep] = useState<Step>("customer");
+  const [step, setStep] = useState<Step>(preselectedCustomerId ? "intake" : "customer");
   const [loading, setLoading] = useState(false);
 
-  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState(preselectedCustomerId || "");
   const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "", projectAddress: "" });
   const [isNewCustomer, setIsNewCustomer] = useState(false);
 

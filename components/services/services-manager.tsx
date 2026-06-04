@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { PlusCircle, Edit3, Trash2, DollarSign, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
+import { PlusCircle, Edit3, DollarSign, Loader2, ToggleLeft, ToggleRight, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import type { Service } from "@prisma/client";
@@ -145,6 +145,26 @@ export function ServicesManager({ services: initialServices, companyId }: Props)
     }
   }
 
+  async function moveService(index: number, direction: "up" | "down") {
+    const newServices = [...services];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newServices.length) return;
+
+    [newServices[index], newServices[targetIndex]] = [newServices[targetIndex], newServices[index]];
+    const updated = newServices.map((s, i) => ({ ...s, sortOrder: i }));
+    setServices(updated);
+
+    await Promise.all(
+      [updated[index], updated[targetIndex]].map((s) =>
+        fetch(`/api/services/${s.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: s.sortOrder }),
+        })
+      )
+    );
+  }
+
   async function toggleActive(service: Service) {
     const res = await fetch(`/api/services/${service.id}`, {
       method: "PATCH",
@@ -170,7 +190,7 @@ export function ServicesManager({ services: initialServices, companyId }: Props)
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {services.map((service) => (
+        {services.map((service, index) => (
           <Card key={service.id} className={`${!service.isActive ? "opacity-60" : ""}`}>
             <CardContent className="pt-5">
               <div className="flex items-start justify-between mb-2">
@@ -182,6 +202,14 @@ export function ServicesManager({ services: initialServices, companyId }: Props)
                   </div>
                 </div>
                 <div className="flex gap-1 ml-2">
+                  <div className="flex flex-col">
+                    <Button size="sm" variant="ghost" className="h-5 px-1" onClick={() => moveService(index, "up")} disabled={index === 0}>
+                      <ArrowUp className="w-3 h-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-5 px-1" onClick={() => moveService(index, "down")} disabled={index === services.length - 1}>
+                      <ArrowDown className="w-3 h-3" />
+                    </Button>
+                  </div>
                   <Button size="sm" variant="ghost" onClick={() => openEdit(service)}>
                     <Edit3 className="w-3.5 h-3.5" />
                   </Button>

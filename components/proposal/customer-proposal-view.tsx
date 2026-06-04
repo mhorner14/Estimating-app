@@ -219,6 +219,19 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
               </div>
             )}
 
+            {estimate.photos && estimate.photos.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Project Photos</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {estimate.photos.map((photo: any) => (
+                    <div key={photo.id} className="rounded-lg overflow-hidden bg-slate-100 aspect-square">
+                      <img src={photo.url} alt={photo.caption || "Project photo"} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Separator />
 
             {/* Pricing */}
