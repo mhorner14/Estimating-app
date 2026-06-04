@@ -67,6 +67,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.internalNotes !== undefined && { internalNotes: body.internalNotes }),
       ...(body.requestedTimeline !== undefined && { requestedTimeline: body.requestedTimeline }),
       ...(body.squareFootage !== undefined && { squareFootage: body.squareFootage }),
+      ...(body.scheduledDate !== undefined && { scheduledDate: body.scheduledDate ? new Date(body.scheduledDate) : null }),
       ...recalcData,
     },
   });

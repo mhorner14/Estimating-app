@@ -283,9 +283,10 @@ model Estimate {
   exclusions       String? @db.Text
   internalNotes    String? @db.Text
 
-  sentAt    DateTime?
-  viewedAt  DateTime?
-  acceptedAt DateTime?
+  sentAt      DateTime?
+  viewedAt    DateTime?
+  acceptedAt  DateTime?
+  scheduledDate DateTime?
 
   stripePaymentIntentId String?
   stripeDepositLinkId   String?

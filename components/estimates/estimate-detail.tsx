@@ -78,6 +78,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
     colorSelection: initialEstimate.colorSelection || "",
     requestedTimeline: initialEstimate.requestedTimeline || "",
     squareFootage: String(initialEstimate.squareFootage || ""),
+    scheduledDate: initialEstimate.scheduledDate ? new Date(initialEstimate.scheduledDate).toISOString().split("T")[0] : "",
   });
   const [savingJobDetails, setSavingJobDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -223,6 +224,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
           colorSelection: jobDetailsForm.colorSelection || null,
           requestedTimeline: jobDetailsForm.requestedTimeline || null,
           squareFootage: jobDetailsForm.squareFootage ? parseFloat(jobDetailsForm.squareFootage) : null,
+          scheduledDate: jobDetailsForm.scheduledDate || null,
         }),
       });
       if (!res.ok) throw new Error();
@@ -638,6 +640,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                         colorSelection: estimate.colorSelection || "",
                         requestedTimeline: estimate.requestedTimeline || "",
                         squareFootage: String(estimate.squareFootage || ""),
+                        scheduledDate: estimate.scheduledDate ? new Date(estimate.scheduledDate).toISOString().split("T")[0] : "",
                       });
                       setEditingJobDetails(true);
                     }}
@@ -675,6 +678,15 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                         placeholder="e.g. Spring 2025"
                       />
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500">Scheduled Date</label>
+                      <Input
+                        type="date"
+                        value={jobDetailsForm.scheduledDate}
+                        onChange={(e) => setJobDetailsForm((f) => ({ ...f, scheduledDate: e.target.value }))}
+                        className="h-8 text-sm"
+                      />
+                    </div>
                     <div className="flex gap-2 pt-1">
                       <Button size="sm" onClick={saveJobDetails} disabled={savingJobDetails}>
                         {savingJobDetails ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3 h-3 mr-1" />Save</>}
@@ -702,6 +714,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                     <div>
                       <p className="text-slate-500">Timeline</p>
                       <p className="font-medium">{estimate.requestedTimeline}</p>
+                    </div>
+                  )}
+                  {estimate.scheduledDate && (
+                    <div>
+                      <p className="text-slate-500">Scheduled Date</p>
+                      <p className="font-medium">{new Date(estimate.scheduledDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                     </div>
                   )}
                   <div>
