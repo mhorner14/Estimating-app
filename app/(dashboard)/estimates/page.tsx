@@ -4,18 +4,21 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { EstimatesView } from "@/components/estimates/estimates-view";
+import { QuickEstimatePanel } from "@/components/estimates/quick-estimate-panel";
 
 export default async function EstimatesPage() {
   const session = await auth();
   const companyId = (session?.user as any)?.companyId;
 
-  const estimates = await prisma.estimate.findMany({
-    where: { companyId },
-    include: {
-      project: { include: { customer: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const [estimates, services, customers] = await Promise.all([
+    prisma.estimate.findMany({
+      where: { companyId },
+      include: { project: { include: { customer: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.service.findMany({ where: { companyId, isActive: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.customer.findMany({ where: { companyId }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
 
   const serialized = estimates.map((e) => ({
     id: e.id,
@@ -53,7 +56,25 @@ export default async function EstimatesPage() {
           <Button asChild><Link href="/estimates/new">Create Estimate</Link></Button>
         </div>
       ) : (
-        <EstimatesView estimates={serialized} />
+        <div className="flex gap-6">
+          <div className="flex-1 min-w-0">
+            <EstimatesView estimates={serialized} />
+          </div>
+          {services.length > 0 && customers.length > 0 && (
+            <div className="w-64 shrink-0 hidden xl:block">
+              <QuickEstimatePanel
+                services={services.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                  basePrice: Number(s.basePrice),
+                  pricingType: s.pricingType,
+                  minCharge: Number(s.minCharge),
+                }))}
+                customers={customers}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
