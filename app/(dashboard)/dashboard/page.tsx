@@ -4,6 +4,7 @@ import { formatCurrency, ESTIMATE_STATUS_LABELS, ESTIMATE_STATUS_COLORS } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 import {
   FileText,
   DollarSign,
@@ -25,7 +26,7 @@ export default async function DashboardPage() {
   const session = await auth();
   const companyId = (session?.user as any)?.companyId;
 
-  const [allEstimates, recentEstimates, company, customerCount] = await Promise.all([
+  const [allEstimates, recentEstimates, company, customerCount, serviceCount] = await Promise.all([
     prisma.estimate.findMany({
       where: { companyId },
       select: { status: true, totalAmount: true },
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
     }),
     prisma.company.findUnique({ where: { id: companyId } }),
     prisma.customer.count({ where: { companyId } }),
+    prisma.service.count({ where: { companyId } }),
   ]);
 
   const wonRevenue = allEstimates
@@ -86,6 +88,37 @@ export default async function DashboardPage() {
 
   const maxCount = Math.max(...pipeline.map((s) => s.count), 1);
 
+  const onboardingItems = [
+    {
+      id: "company",
+      label: "Set up your company profile",
+      description: "Add your company name, phone, address, and license number",
+      href: "/settings",
+      completed: !!(company?.phone && company?.address),
+    },
+    {
+      id: "services",
+      label: "Add your services & pricing",
+      description: "Add the services you offer so the AI can price estimates accurately",
+      href: "/services",
+      completed: serviceCount > 0,
+    },
+    {
+      id: "estimate",
+      label: "Create your first estimate",
+      description: "Try the AI intake — describe a job in plain English",
+      href: "/estimates/new",
+      completed: allEstimates.length > 0,
+    },
+    {
+      id: "proposal",
+      label: "Send a proposal to a customer",
+      description: "Generate a proposal and email it to a customer for signature",
+      href: "/estimates",
+      completed: allEstimates.some((e) => ["SENT", "VIEWED", ...WON_STATUSES].includes(e.status)),
+    },
+  ];
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
@@ -102,6 +135,8 @@ export default async function DashboardPage() {
           </Link>
         </Button>
       </div>
+
+      <OnboardingChecklist items={onboardingItems} />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
