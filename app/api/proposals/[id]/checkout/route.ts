@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     ],
     mode: "payment",
     customer_email: customer.email || undefined,
-    success_url: `${proposalUrl}?payment=success`,
+    success_url: `${appUrl}/payment-success?token=${proposal.publicToken}&type=${paymentType}`,
     cancel_url: `${proposalUrl}?payment=cancelled`,
     metadata: {
       estimateId: estimate.id,
