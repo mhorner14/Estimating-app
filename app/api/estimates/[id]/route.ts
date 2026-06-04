@@ -65,6 +65,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.exclusions !== undefined && { exclusions: body.exclusions }),
       ...(body.colorSelection !== undefined && { colorSelection: body.colorSelection }),
       ...(body.internalNotes !== undefined && { internalNotes: body.internalNotes }),
+      ...(body.requestedTimeline !== undefined && { requestedTimeline: body.requestedTimeline }),
+      ...(body.squareFootage !== undefined && { squareFootage: body.squareFootage }),
       ...recalcData,
     },
   });

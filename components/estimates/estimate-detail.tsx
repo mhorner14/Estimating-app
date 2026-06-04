@@ -60,6 +60,13 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [photos, setPhotos] = useState(initialEstimate.photos || []);
   const [discountInput, setDiscountInput] = useState(String(initialEstimate.discountAmount || "0"));
   const [savingDiscount, setSavingDiscount] = useState(false);
+  const [editingJobDetails, setEditingJobDetails] = useState(false);
+  const [jobDetailsForm, setJobDetailsForm] = useState({
+    colorSelection: initialEstimate.colorSelection || "",
+    requestedTimeline: initialEstimate.requestedTimeline || "",
+    squareFootage: String(initialEstimate.squareFootage || ""),
+  });
+  const [savingJobDetails, setSavingJobDetails] = useState(false);
 
   const aiSuggestions = estimate.aiSuggestions as any;
 
@@ -129,6 +136,30 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to send proposal", variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveJobDetails() {
+    setSavingJobDetails(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          colorSelection: jobDetailsForm.colorSelection || null,
+          requestedTimeline: jobDetailsForm.requestedTimeline || null,
+          squareFootage: jobDetailsForm.squareFootage ? parseFloat(jobDetailsForm.squareFootage) : null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      setEstimate((e: any) => ({ ...e, ...updated }));
+      setEditingJobDetails(false);
+      toast({ title: "Job details saved" });
+    } catch {
+      toast({ title: "Error", description: "Failed to save", variant: "destructive" });
+    } finally {
+      setSavingJobDetails(false);
     }
   }
 
@@ -485,9 +516,62 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
 
               {/* Job Details */}
               <Card>
-                <CardHeader className="py-4">
+                <CardHeader className="py-4 flex flex-row items-center justify-between">
                   <CardTitle className="text-base">Job Details</CardTitle>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setJobDetailsForm({
+                        colorSelection: estimate.colorSelection || "",
+                        requestedTimeline: estimate.requestedTimeline || "",
+                        squareFootage: String(estimate.squareFootage || ""),
+                      });
+                      setEditingJobDetails(true);
+                    }}
+                  >
+                    <Edit3 className="w-3 h-3 mr-1" /> Edit
+                  </Button>
                 </CardHeader>
+                {editingJobDetails ? (
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500">Square Footage</label>
+                      <Input
+                        type="number"
+                        value={jobDetailsForm.squareFootage}
+                        onChange={(e) => setJobDetailsForm((f) => ({ ...f, squareFootage: e.target.value }))}
+                        className="h-8 text-sm"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500">Color Selection</label>
+                      <Input
+                        value={jobDetailsForm.colorSelection}
+                        onChange={(e) => setJobDetailsForm((f) => ({ ...f, colorSelection: e.target.value }))}
+                        className="h-8 text-sm"
+                        placeholder="e.g. Silver Gray Flake"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500">Timeline</label>
+                      <Input
+                        value={jobDetailsForm.requestedTimeline}
+                        onChange={(e) => setJobDetailsForm((f) => ({ ...f, requestedTimeline: e.target.value }))}
+                        className="h-8 text-sm"
+                        placeholder="e.g. Spring 2025"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" onClick={saveJobDetails} disabled={savingJobDetails}>
+                        {savingJobDetails ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3 h-3 mr-1" />Save</>}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingJobDetails(false)}>Cancel</Button>
+                    </div>
+                  </CardContent>
+                ) : (
                 <CardContent className="grid grid-cols-2 gap-4 text-sm">
                   {estimate.squareFootage && (
                     <div>
@@ -535,6 +619,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                     </div>
                   </div>
                 </CardContent>
+                )}
               </Card>
             </div>
 
