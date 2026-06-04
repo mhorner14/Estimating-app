@@ -58,6 +58,8 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [copiedLink, setCopiedLink] = useState(false);
   const [notes, setNotes] = useState(initialEstimate.notes || []);
   const [photos, setPhotos] = useState(initialEstimate.photos || []);
+  const [discountInput, setDiscountInput] = useState(String(initialEstimate.discountAmount || "0"));
+  const [savingDiscount, setSavingDiscount] = useState(false);
 
   const aiSuggestions = estimate.aiSuggestions as any;
 
@@ -127,6 +129,26 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to send proposal", variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function applyDiscount() {
+    const amount = parseFloat(discountInput) || 0;
+    setSavingDiscount(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discountAmount: amount }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      setEstimate((e: any) => ({ ...e, ...updated }));
+      toast({ title: "Discount applied" });
+    } catch {
+      toast({ title: "Error", description: "Failed to apply discount", variant: "destructive" });
+    } finally {
+      setSavingDiscount(false);
     }
   }
 
@@ -518,6 +540,36 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
 
             {/* Sidebar */}
             <div className="space-y-4">
+              <Card>
+                <CardHeader className="py-4">
+                  <CardTitle className="text-base">Discount</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={discountInput}
+                        onChange={(e) => setDiscountInput(e.target.value)}
+                        className="pl-7 h-9"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={applyDiscount}
+                      disabled={savingDiscount}
+                    >
+                      {savingDiscount ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader className="py-4">
                   <CardTitle className="text-base">Pricing Summary</CardTitle>

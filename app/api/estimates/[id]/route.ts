@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { calculateEstimateTotals } from "@/lib/utils";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,6 +35,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const estimate = await prisma.estimate.findFirst({ where: { id, companyId } });
   if (!estimate) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  let recalcData: Record<string, number> = {};
+  if (body.discountAmount !== undefined) {
+    const lineItems = await prisma.estimateLineItem.findMany({ where: { estimateId: id } });
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    const taxRate = company?.taxEnabled ? Number(company.taxRate || 0) : 0;
+    const totals = calculateEstimateTotals(lineItems, 0, body.discountAmount, taxRate);
+    const depositPct = Number(company?.depositPercentage || 50);
+    const depositAmount = (totals.totalAmount * depositPct) / 100;
+    recalcData = {
+      subtotal: totals.subtotal,
+      discountAmount: body.discountAmount,
+      taxAmount: totals.taxAmount,
+      totalAmount: totals.totalAmount,
+      depositAmount,
+      balanceDue: totals.totalAmount - depositAmount,
+    };
+  }
+
   const updated = await prisma.estimate.update({
     where: { id },
     data: {
@@ -45,8 +64,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.warrantyText !== undefined && { warrantyText: body.warrantyText }),
       ...(body.exclusions !== undefined && { exclusions: body.exclusions }),
       ...(body.colorSelection !== undefined && { colorSelection: body.colorSelection }),
-      ...(body.discountAmount !== undefined && { discountAmount: body.discountAmount }),
       ...(body.internalNotes !== undefined && { internalNotes: body.internalNotes }),
+      ...recalcData,
     },
   });
 
