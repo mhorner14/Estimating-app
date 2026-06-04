@@ -82,6 +82,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [savingJobDetails, setSavingJobDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [sendingFollowUp, setSendingFollowUp] = useState(false);
 
   const aiSuggestions = estimate.aiSuggestions as any;
 
@@ -151,6 +152,20 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to send proposal", variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function sendFollowUp() {
+    setSendingFollowUp(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/follow-up`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast({ title: "Follow-up sent!", description: "Reminder email sent to customer." });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to send follow-up", variant: "destructive" });
+    } finally {
+      setSendingFollowUp(false);
     }
   }
 
@@ -363,6 +378,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 <CopyPlus className="w-4 h-4 mr-2" />
                 {duplicating ? "Duplicating..." : "Duplicate Estimate"}
               </DropdownMenuItem>
+              {["SENT", "VIEWED"].includes(estimate.status) && estimate.project?.customer?.email && (
+                <DropdownMenuItem onClick={sendFollowUp} disabled={sendingFollowUp}>
+                  <Send className="w-4 h-4 mr-2" />
+                  {sendingFollowUp ? "Sending..." : "Send Follow-up Email"}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={deleteEstimate}

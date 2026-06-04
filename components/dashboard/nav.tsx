@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -14,6 +15,8 @@ import {
   PlusCircle,
   ChevronDown,
   BarChart3,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -42,15 +45,14 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function DashboardNav({ user }: NavProps) {
-  const pathname = usePathname();
+function NavContent({ user, pathname, onClose }: { user: NavProps["user"]; pathname: string; onClose?: () => void }) {
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "U";
 
   return (
-    <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen sticky top-0">
-      <div className="p-6 border-b border-slate-700">
+    <>
+      <div className="p-6 border-b border-slate-700 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
             <Building2 className="w-5 h-5 text-white" />
@@ -60,11 +62,17 @@ export function DashboardNav({ user }: NavProps) {
             <p className="text-xs text-slate-400">Contractor Platform</p>
           </div>
         </div>
+        {onClose && (
+          <button onClick={onClose} className="text-slate-400 hover:text-white lg:hidden">
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       <div className="p-4">
         <Link
           href="/estimates/new"
+          onClick={onClose}
           className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
         >
           <PlusCircle className="w-4 h-4" />
@@ -72,13 +80,14 @@ export function DashboardNav({ user }: NavProps) {
         </Link>
       </div>
 
-      <nav className="flex-1 px-3 pb-4 space-y-1">
+      <nav className="flex-1 px-3 pb-4 space-y-1 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 active
@@ -122,6 +131,49 @@ export function DashboardNav({ user }: NavProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function DashboardNav({ user }: NavProps) {
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 text-white flex items-center gap-3 px-4 py-3 border-b border-slate-700">
+        <button onClick={() => setMobileOpen(true)} className="text-slate-400 hover:text-white">
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+            <Building2 className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="font-semibold text-sm">ProEstimate</span>
+        </div>
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <div className={cn(
+        "lg:hidden fixed top-0 left-0 z-50 h-screen w-64 bg-slate-900 text-white flex flex-col transition-transform duration-200",
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <NavContent user={user} pathname={pathname} onClose={() => setMobileOpen(false)} />
+      </div>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex w-64 bg-slate-900 text-white flex-col h-screen sticky top-0 shrink-0">
+        <NavContent user={user} pathname={pathname} />
+      </aside>
+    </>
   );
 }
