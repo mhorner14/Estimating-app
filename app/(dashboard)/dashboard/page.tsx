@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
+import { RevenueGoal } from "@/components/dashboard/revenue-goal";
 import {
   FileText,
   DollarSign,
@@ -27,10 +28,12 @@ export default async function DashboardPage() {
   const session = await auth();
   const companyId = (session?.user as any)?.companyId;
 
+  const thisMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
   const [allEstimates, recentEstimates, company, customerCount, serviceCount, recentActivity] = await Promise.all([
     prisma.estimate.findMany({
       where: { companyId },
-      select: { status: true, totalAmount: true },
+      select: { status: true, totalAmount: true, createdAt: true },
     }),
     prisma.estimate.findMany({
       where: { companyId },
@@ -51,6 +54,10 @@ export default async function DashboardPage() {
       take: 10,
     }),
   ]);
+
+  const monthRevenue = allEstimates
+    .filter((e) => WON_STATUSES.includes(e.status) && e.createdAt >= thisMonthStart)
+    .reduce((sum, e) => sum + Number(e.totalAmount), 0);
 
   const wonRevenue = allEstimates
     .filter((e) => WON_STATUSES.includes(e.status))
@@ -236,7 +243,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <div className="space-y-4">
+          <RevenueGoal monthRevenue={monthRevenue} goal={company?.monthlyRevenueGoal ?? null} />
+          <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-orange-500" />
@@ -270,6 +279,7 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
 
       {/* Recent estimates */}

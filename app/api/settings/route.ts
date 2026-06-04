@@ -34,6 +34,7 @@ export async function PATCH(req: NextRequest) {
       proposalEmailBody: body.proposalEmailBody,
       followUpEmailSubject: body.followUpEmailSubject,
       followUpEmailBody: body.followUpEmailBody,
+      ...(body.monthlyRevenueGoal !== undefined && { monthlyRevenueGoal: body.monthlyRevenueGoal || null }),
     },
   });
 

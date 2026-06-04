@@ -102,6 +102,7 @@ model Company {
   proposalEmailBody   String?  @db.Text
   followUpEmailSubject String?
   followUpEmailBody   String?  @db.Text
+  monthlyRevenueGoal  Float?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
