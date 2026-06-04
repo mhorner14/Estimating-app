@@ -43,7 +43,9 @@ export default async function CustomersPage() {
               <CardContent className="pt-5 pb-5">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="font-semibold text-slate-900">{customer.name}</p>
+                    <Link href={`/customers/${customer.id}`} className="font-semibold text-slate-900 hover:text-blue-600 hover:underline">
+                      {customer.name}
+                    </Link>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {customer._count.projects} project{customer._count.projects !== 1 ? "s" : ""}
                     </p>
