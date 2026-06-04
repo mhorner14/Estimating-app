@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, X } from "lucide-react";
+import { Search, X, Download } from "lucide-react";
 import { formatCurrency, formatDate, ESTIMATE_STATUS_LABELS, ESTIMATE_STATUS_COLORS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -82,6 +82,28 @@ export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
     }
   }
 
+  function exportCsv() {
+    const rows = [
+      ["Estimate #", "Customer", "Phone", "Date", "Total", "Status"],
+      ...filtered.map((e) => [
+        e.estimateNumber,
+        e.project.customer.name,
+        e.project.customer.phone || "",
+        new Date(e.createdAt).toLocaleDateString(),
+        e.totalAmount.toFixed(2),
+        ESTIMATE_STATUS_LABELS[e.status as keyof typeof ESTIMATE_STATUS_LABELS] || e.status,
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `estimates-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const filtered = useMemo(() => {
     return estimates.filter((e) => {
       const matchesStatus = statusFilter === "ALL" || e.status === statusFilter;
@@ -132,6 +154,9 @@ export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
             Clear
           </Button>
         )}
+        <Button variant="outline" size="sm" onClick={exportCsv} className="ml-auto">
+          <Download className="w-3.5 h-3.5 mr-1.5" /> Export CSV
+        </Button>
       </div>
 
       <p className="text-xs text-slate-500">
