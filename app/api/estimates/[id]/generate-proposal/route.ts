@@ -54,6 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         warrantyText: proposalContent.warrantyText,
         exclusions: proposalContent.exclusions,
         status: "READY_FOR_REVIEW",
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       },
       include: {
         project: { include: { customer: true } },

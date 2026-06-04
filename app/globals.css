@@ -53,3 +53,12 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+@media print {
+  .print\:hidden { display: none !important; }
+  .print\:bg-white { background-color: white !important; }
+  .print\:py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
+  .print\:px-0 { padding-left: 0 !important; padding-right: 0 !important; }
+  body { background: white; }
+  @page { margin: 0.5in; }
+}

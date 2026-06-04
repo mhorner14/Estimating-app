@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, MapPin, Phone, Mail, CheckCircle, PenLine, DollarSign, Loader2, AlertCircle, CreditCard } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, CheckCircle, PenLine, DollarSign, Loader2, AlertCircle, CreditCard, Printer } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -156,8 +156,17 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-3xl mx-auto py-8 px-4">
+    <div className="min-h-screen bg-slate-50 print:bg-white">
+      <div className="max-w-3xl mx-auto py-8 px-4 print:py-0 print:px-0">
+        <div className="flex justify-end mb-4 print:hidden">
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print / Save PDF
+          </button>
+        </div>
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           {/* Header */}
           <div className="bg-slate-900 text-white p-8">
@@ -199,6 +208,29 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
           </div>
 
           <div className="p-8 space-y-8">
+            {estimate.validUntil && (() => {
+              const expiry = new Date(estimate.validUntil);
+              const isExpired = expiry < new Date();
+              const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+              if (isExpired) {
+                return (
+                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+                    <p className="text-sm font-medium">This proposal expired on {expiry.toLocaleDateString()}. Please contact us for an updated quote.</p>
+                  </div>
+                );
+              }
+              if (daysLeft <= 7) {
+                return (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                    <p className="text-sm font-medium">This proposal expires in {daysLeft} day{daysLeft !== 1 ? "s" : ""} on {expiry.toLocaleDateString()}.</p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {paymentStatus === "success" && (
               <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
                 <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
