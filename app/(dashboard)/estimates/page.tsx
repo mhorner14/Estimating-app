@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
-import { EstimatesTable } from "@/components/estimates/estimates-table";
+import { EstimatesView } from "@/components/estimates/estimates-view";
 
 export default async function EstimatesPage() {
   const session = await auth();
@@ -52,7 +52,7 @@ export default async function EstimatesPage() {
           <Button asChild><Link href="/estimates/new">Create Estimate</Link></Button>
         </div>
       ) : (
-        <EstimatesTable estimates={serialized} />
+        <EstimatesView estimates={serialized} />
       )}
     </div>
   );
