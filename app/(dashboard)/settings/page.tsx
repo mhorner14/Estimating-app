@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CompanySettings } from "@/components/settings/company-settings";
 import { WarrantyRulesManager } from "@/components/settings/warranty-rules-manager";
+import { EmailTemplatesSettings } from "@/components/settings/email-templates-settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function SettingsPage() {
@@ -29,12 +30,16 @@ export default async function SettingsPage() {
         <TabsList className="mb-6">
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="warranty">Warranty Rules</TabsTrigger>
+          <TabsTrigger value="emails">Email Templates</TabsTrigger>
         </TabsList>
         <TabsContent value="company">
           <CompanySettings company={company as any} />
         </TabsContent>
         <TabsContent value="warranty">
           <WarrantyRulesManager rules={serializedRules} />
+        </TabsContent>
+        <TabsContent value="emails">
+          <EmailTemplatesSettings company={company as any} />
         </TabsContent>
       </Tabs>
     </div>

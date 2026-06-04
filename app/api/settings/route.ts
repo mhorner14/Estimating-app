@@ -29,6 +29,10 @@ export async function PATCH(req: NextRequest) {
       taxRate: body.taxRate,
       taxEnabled: body.taxEnabled,
       proposalFooter: body.proposalFooter,
+      proposalEmailSubject: body.proposalEmailSubject,
+      proposalEmailBody: body.proposalEmailBody,
+      followUpEmailSubject: body.followUpEmailSubject,
+      followUpEmailBody: body.followUpEmailBody,
     },
   });
 

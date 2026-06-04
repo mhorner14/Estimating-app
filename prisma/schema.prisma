@@ -98,6 +98,10 @@ model Company {
   proposalFooter      String?  @db.Text
   primaryColor        String?  @default("#1a1a2e")
   accentColor         String?  @default("#e94560")
+  proposalEmailSubject String?
+  proposalEmailBody   String?  @db.Text
+  followUpEmailSubject String?
+  followUpEmailBody   String?  @db.Text
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
