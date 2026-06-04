@@ -50,5 +50,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
   });
 
+  if (body.status && body.status !== estimate.status) {
+    await prisma.activityLog.create({
+      data: {
+        userId: session.user.id,
+        entityType: "estimate",
+        entityId: id,
+        action: "status_changed",
+        metadata: { from: estimate.status, to: body.status },
+      },
+    });
+  }
+
   return NextResponse.json(updated);
 }
