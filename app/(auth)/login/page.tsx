@@ -87,12 +87,15 @@ function LoginForm() {
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign In
           </Button>
-          <p className="text-slate-400 text-sm text-center">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-blue-400 hover:underline">
-              Create one
+          <div className="flex flex-col items-center gap-1 text-sm">
+            <p className="text-slate-400">
+              Don&apos;t have an account?{" "}
+              <Link href="/register" className="text-blue-400 hover:underline">Create one</Link>
+            </p>
+            <Link href="/forgot-password" className="text-slate-500 hover:text-slate-300 text-xs">
+              Forgot password?
             </Link>
-          </p>
+          </div>
         </CardFooter>
       </form>
     </Card>
