@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, MapPin, Phone, Mail, CheckCircle, PenLine, DollarSign, Loader2, AlertCircle } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, CheckCircle, PenLine, DollarSign, Loader2, AlertCircle, CreditCard } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,11 +26,32 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
   const [submitting, setSubmitting] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [payingDeposit, setPayingDeposit] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
   const isAlreadySigned = !!estimate.signature;
+
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const paymentStatus = searchParams?.get("payment");
+
+  async function handlePayDeposit(paymentType: "DEPOSIT" | "BALANCE" | "FULL") {
+    setPayingDeposit(true);
+    try {
+      const res = await fetch(`/api/proposals/${proposal.id}/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentType }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch {
+      toast({ title: "Error", description: "Could not initiate payment. Please try again.", variant: "destructive" });
+      setPayingDeposit(false);
+    }
+  }
 
   function getPos(canvas: HTMLCanvasElement, e: React.MouseEvent | React.TouchEvent) {
     const rect = canvas.getBoundingClientRect();
@@ -172,6 +193,13 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
           </div>
 
           <div className="p-8 space-y-8">
+            {paymentStatus === "success" && (
+              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
+                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                <p className="text-sm font-medium">Payment received — thank you! We&apos;ll be in touch to schedule your project.</p>
+              </div>
+            )}
+
             {/* Customer Info */}
             <div className="grid grid-cols-2 gap-6 p-4 bg-slate-50 rounded-lg">
               <div>
@@ -283,6 +311,24 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
                 <p className="text-xs text-slate-600 mt-1">Due upon completion</p>
               </div>
             </div>
+
+            {Number(estimate.depositAmount) > 0 && !isAlreadySigned && paymentStatus !== "success" && (
+              <div className="space-y-2">
+                <Button
+                  size="lg"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => handlePayDeposit("DEPOSIT")}
+                  disabled={payingDeposit}
+                >
+                  {payingDeposit ? (
+                    <><Loader2 className="mr-2 w-4 h-4 animate-spin" /> Redirecting to payment...</>
+                  ) : (
+                    <><CreditCard className="mr-2 w-4 h-4" /> Pay Deposit — {formatCurrency(Number(estimate.depositAmount))}</>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-slate-500">Secure payment powered by Stripe</p>
+              </div>
+            )}
 
             {estimate.warrantyText && (
               <div>
