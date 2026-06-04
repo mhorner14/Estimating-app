@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
-import { DollarSign, TrendingUp, Target, BarChart3, Users, Award } from "lucide-react";
+import { DollarSign, TrendingUp, Target, BarChart3, Users, Award, Download } from "lucide-react";
 
 interface ReportData {
   summary: {
@@ -118,7 +118,23 @@ export function ReportsDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex gap-2">
+          <a
+            href="/api/reports/export?format=csv"
+            download
+            className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" /> Export CSV
+          </a>
+          <a
+            href="/api/reports/export?format=quickbooks"
+            download
+            className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" /> QuickBooks IIF
+          </a>
+        </div>
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-40">
             <SelectValue />
