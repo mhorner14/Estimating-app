@@ -15,6 +15,7 @@ import {
   CheckCircle,
   AlertCircle,
   Users,
+  Activity,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ export default async function DashboardPage() {
   const session = await auth();
   const companyId = (session?.user as any)?.companyId;
 
-  const [allEstimates, recentEstimates, company, customerCount, serviceCount] = await Promise.all([
+  const [allEstimates, recentEstimates, company, customerCount, serviceCount, recentActivity] = await Promise.all([
     prisma.estimate.findMany({
       where: { companyId },
       select: { status: true, totalAmount: true },
@@ -40,6 +41,15 @@ export default async function DashboardPage() {
     prisma.company.findUnique({ where: { id: companyId } }),
     prisma.customer.count({ where: { companyId } }),
     prisma.service.count({ where: { companyId } }),
+    prisma.activityLog.findMany({
+      where: {
+        entityType: "estimate",
+        user: { companyId },
+      },
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
   ]);
 
   const wonRevenue = allEstimates
@@ -316,6 +326,52 @@ export default async function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {recentActivity.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="w-4 h-4 text-slate-500" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {recentActivity.map((log) => {
+                const actionLabels: Record<string, string> = {
+                  status_changed: "Status changed",
+                  proposal_generated: "Proposal generated",
+                  proposal_sent: "Proposal sent",
+                  follow_up_sent: "Follow-up sent",
+                  balance_request_sent: "Balance request sent",
+                  payment_recorded: "Payment recorded",
+                };
+                const label = actionLabels[log.action] || log.action.replace(/_/g, " ");
+                const meta = log.metadata as Record<string, unknown> | null;
+                return (
+                  <div key={log.id} className="flex items-start gap-3 px-4 py-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-700">
+                        <span className="font-medium">{label}</span>
+                        {meta?.to ? <span className="text-slate-500"> → {String(meta.to)}</span> : null}
+                        {meta?.newStatus ? <span className="text-slate-500"> → {String(meta.newStatus)}</span> : null}
+                        {meta?.amount ? <span className="text-slate-500"> (${Number(meta.amount).toFixed(2)})</span> : null}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {log.user?.name || "System"} · {new Date(log.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <Link href={`/estimates/${log.entityId}`} className="text-xs text-blue-500 hover:underline shrink-0">
+                      View
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
