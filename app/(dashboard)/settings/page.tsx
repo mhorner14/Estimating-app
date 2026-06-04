@@ -4,6 +4,7 @@ import { CompanySettings } from "@/components/settings/company-settings";
 import { WarrantyRulesManager } from "@/components/settings/warranty-rules-manager";
 import { EmailTemplatesSettings } from "@/components/settings/email-templates-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
+import { TeamSettings } from "@/components/settings/team-settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function SettingsPage() {
@@ -11,6 +12,7 @@ export default async function SettingsPage() {
   const companyId = (session?.user as any)?.companyId;
 
   const userId = (session?.user as any)?.id;
+  const userRole = (session?.user as any)?.role || "ESTIMATOR";
 
   const [company, warrantyRules] = await Promise.all([
     prisma.company.findUnique({ where: { id: companyId } }),
@@ -35,6 +37,7 @@ export default async function SettingsPage() {
           <TabsTrigger value="warranty">Warranty Rules</TabsTrigger>
           <TabsTrigger value="emails">Email Templates</TabsTrigger>
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="team">Team</TabsTrigger>
         </TabsList>
         <TabsContent value="company">
           <CompanySettings company={company as any} />
@@ -47,6 +50,9 @@ export default async function SettingsPage() {
         </TabsContent>
         <TabsContent value="profile">
           <ProfileSettings user={{ id: userId, name: session?.user?.name, email: session?.user?.email }} />
+        </TabsContent>
+        <TabsContent value="team">
+          <TeamSettings currentUserId={userId} currentUserRole={userRole} />
         </TabsContent>
       </Tabs>
     </div>
