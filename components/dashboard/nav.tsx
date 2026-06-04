@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { GlobalSearch } from "@/components/global-search";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,11 +66,14 @@ function NavContent({ user, pathname, onClose }: { user: NavProps["user"]; pathn
             <p className="text-xs text-slate-400">Contractor Platform</p>
           </div>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="text-slate-400 hover:text-white lg:hidden">
-            <X className="w-5 h-5" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          {onClose && (
+            <button onClick={onClose} className="text-slate-400 hover:text-white lg:hidden">
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="p-4 space-y-2">
