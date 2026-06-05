@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { sendSignedConfirmationEmail } from "@/lib/email";
+import { fireWebhook } from "@/lib/webhooks";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -105,6 +106,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   </div>
 </body></html>`,
     }).catch(() => {}); // Don't fail if notification email fails
+  }
+
+  // Fire webhook if configured
+  if ((company as any).webhookUrl) {
+    await fireWebhook((company as any).webhookUrl, "proposal.accepted", {
+      estimateId: proposal.estimateId,
+      estimateNumber,
+      customerName: customer.name,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+      totalAmount: Number(proposal.estimate.totalAmount),
+      signerName,
+      signedAt: new Date().toISOString(),
+    });
   }
 
   return NextResponse.json({ success: true });

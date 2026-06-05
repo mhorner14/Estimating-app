@@ -106,6 +106,7 @@ model Company {
   intakeFormSlug      String?  @unique
   googleReviewUrl     String?
   yelpReviewUrl       String?
+  webhookUrl          String?
   plan                String   @default("FREE") // FREE, STARTER, PRO, ENTERPRISE
   stripeCustomerId    String?
   stripeSubscriptionId String?
