@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, PlusCircle, Tag } from "lucide-react";
 import { formatCurrency, formatDate, ESTIMATE_STATUS_LABELS, ESTIMATE_STATUS_COLORS } from "@/lib/utils";
 import { CustomerContactCard } from "@/components/customers/customer-contact-card";
+import { CustomerInsightsCard } from "@/components/customers/customer-insights-card";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -83,6 +84,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </div>
 
           <p className="text-xs text-slate-400">Customer since {formatDate(customer.createdAt)}</p>
+          <CustomerInsightsCard customerId={customer.id} />
         </div>
 
         <div className="lg:col-span-2 space-y-4">
