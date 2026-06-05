@@ -115,6 +115,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [copiedCrewLink, setCopiedCrewLink] = useState(false);
   const [lostReason, setLostReason] = useState("");
   const [customLostReason, setCustomLostReason] = useState("");
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachData, setCoachData] = useState<any>(null);
 
   const aiSuggestions = estimate.aiSuggestions as any;
 
@@ -186,6 +189,22 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to generate proposal", variant: "destructive" });
     } finally {
       setGeneratingProposal(false);
+    }
+  }
+
+  async function openCoach() {
+    setCoachOpen(true);
+    setCoachLoading(true);
+    setCoachData(null);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/proposal-score`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      setCoachData(await res.json());
+    } catch {
+      toast({ title: "Failed to score proposal", variant: "destructive" });
+      setCoachOpen(false);
+    } finally {
+      setCoachLoading(false);
     }
   }
 
@@ -576,9 +595,15 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
           )}
           {estimate.scopeOfWork &&
             !["SENT", "VIEWED", "ACCEPTED", "DEPOSIT_PAID"].includes(estimate.status) && (
-              <Button onClick={sendProposal} disabled={loading}>
-                <Send className="mr-2 w-4 h-4" /> Send to Customer
-              </Button>
+              <>
+                <Button variant="outline" onClick={openCoach} disabled={coachLoading}>
+                  {coachLoading ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : <Sparkles className="mr-2 w-4 h-4 text-amber-500" />}
+                  Proposal Coach
+                </Button>
+                <Button onClick={sendProposal} disabled={loading}>
+                  <Send className="mr-2 w-4 h-4" /> Send to Customer
+                </Button>
+              </>
             )}
           {proposalLink && (
             <Button variant="outline" onClick={copyProposalLink}>
@@ -1621,6 +1646,87 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
             ) : (
               <p className="text-sm text-slate-500 text-center py-8">No materials generated.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {coachOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                Proposal Coach
+              </h3>
+              <button onClick={() => setCoachOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+            </div>
+            {coachLoading ? (
+              <div className="flex flex-col items-center gap-3 py-10 text-slate-500">
+                <Loader2 className="w-7 h-7 animate-spin text-amber-400" />
+                <p className="text-sm">Analyzing your proposal...</p>
+              </div>
+            ) : coachData ? (
+              <div className="space-y-4">
+                {/* Overall score */}
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="text-center flex-shrink-0">
+                    <div className={`text-4xl font-black ${coachData.overallScore >= 8 ? "text-emerald-500" : coachData.overallScore >= 6 ? "text-amber-500" : "text-red-500"}`}>
+                      {coachData.overallScore}
+                    </div>
+                    <div className="text-xs text-slate-400 font-medium">/ 10</div>
+                  </div>
+                  <div className="flex-1">
+                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full mb-1.5 ${coachData.readyToSend ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {coachData.readyToSend ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                      {coachData.readyToSend ? "Ready to send" : "Needs attention"}
+                    </div>
+                    {coachData.topAction && (
+                      <p className="text-sm text-slate-600">{coachData.topAction}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category scores */}
+                {coachData.categories?.map((cat: any) => (
+                  <div key={cat.name} className="flex items-start gap-3">
+                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${cat.status === "good" ? "bg-emerald-400" : cat.status === "warning" ? "bg-amber-400" : "bg-red-400"}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-800">{cat.name}</span>
+                        <span className={`text-sm font-bold ${cat.status === "good" ? "text-emerald-600" : cat.status === "warning" ? "text-amber-600" : "text-red-600"}`}>{cat.score}/10</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">{cat.tip}</p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Strengths */}
+                {coachData.strengths?.length > 0 && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <p className="text-xs font-semibold text-emerald-700 mb-1.5">Strengths</p>
+                    <ul className="space-y-1">
+                      {coachData.strengths.map((s: string, i: number) => (
+                        <li key={i} className="text-xs text-emerald-700 flex items-start gap-1.5">
+                          <CheckCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <Button variant="outline" onClick={() => setCoachOpen(false)} className="flex-1">Close</Button>
+                  <Button
+                    className="flex-1 bg-slate-900 hover:bg-slate-800"
+                    onClick={() => { setCoachOpen(false); sendProposal(); }}
+                    disabled={loading}
+                  >
+                    <Send className="w-4 h-4 mr-2" /> Send Anyway
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
