@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calculateEstimateTotals } from "@/lib/utils";
+import { fireWebhook } from "@/lib/webhooks";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -88,6 +89,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         metadata: { from: estimate.status, to: body.status },
       },
     });
+
+    const webhookStatuses = ["COMPLETED", "PAID_IN_FULL", "LOST", "SCHEDULED"];
+    if (webhookStatuses.includes(body.status)) {
+      const company = await prisma.company.findUnique({ where: { id: companyId }, select: { webhookUrl: true } });
+      if (company?.webhookUrl) {
+        const fullEstimate = await prisma.estimate.findUnique({
+          where: { id },
+          include: { project: { include: { customer: true } } },
+        });
+        const eventName = body.status === "COMPLETED" ? "job.completed" : body.status === "PAID_IN_FULL" ? "job.paid" : body.status === "LOST" ? "estimate.lost" : "job.scheduled";
+        await fireWebhook(company.webhookUrl, eventName, {
+          estimateId: id,
+          estimateNumber: updated.estimateNumber,
+          status: body.status,
+          totalAmount: Number(updated.totalAmount),
+          customerName: fullEstimate?.project.customer.name,
+          customerEmail: fullEstimate?.project.customer.email,
+        });
+      }
+    }
   }
 
   return NextResponse.json(updated);
