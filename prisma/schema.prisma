@@ -325,6 +325,20 @@ model Estimate {
   photos       Photo[]
   notes        Note[]
   changeOrders ChangeOrder[]
+  expenses     JobExpense[]
+}
+
+model JobExpense {
+  id          String   @id @default(cuid())
+  estimateId  String
+  estimate    Estimate @relation(fields: [estimateId], references: [id])
+  description String
+  category    String   @default("MATERIAL") // MATERIAL, LABOR, SUBCONTRACTOR, OTHER
+  amount      Float
+  vendor      String?
+  receiptUrl  String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
 }
 
 model ChangeOrder {
