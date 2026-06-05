@@ -31,7 +31,10 @@ export default async function DashboardPage() {
 
   const thisMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-  const [allEstimates, recentEstimates, company, customerCount, serviceCount, recentActivity] = await Promise.all([
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+
+  const [allEstimates, recentEstimates, company, customerCount, serviceCount, recentActivity, todaysJobs] = await Promise.all([
     prisma.estimate.findMany({
       where: { companyId },
       select: { status: true, totalAmount: true, createdAt: true },
@@ -46,13 +49,19 @@ export default async function DashboardPage() {
     prisma.customer.count({ where: { companyId } }),
     prisma.service.count({ where: { companyId } }),
     prisma.activityLog.findMany({
-      where: {
-        entityType: "estimate",
-        user: { companyId },
-      },
+      where: { entityType: "estimate", user: { companyId } },
       include: { user: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
       take: 10,
+    }),
+    prisma.estimate.findMany({
+      where: {
+        companyId,
+        scheduledDate: { gte: todayStart, lte: todayEnd },
+        status: { notIn: ["LOST", "PAID_IN_FULL", "DRAFT"] },
+      },
+      include: { project: { include: { customer: true } } },
+      orderBy: { scheduledDate: "asc" },
     }),
   ]);
 
@@ -245,6 +254,31 @@ export default async function DashboardPage() {
         </Card>
 
         <div className="space-y-4">
+          {todaysJobs.length > 0 && (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-blue-900">
+                  <Activity className="w-4 h-4 text-blue-600" />
+                  Today&apos;s Jobs ({todaysJobs.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {todaysJobs.map((job) => (
+                  <Link
+                    key={job.id}
+                    href={`/estimates/${job.id}`}
+                    className="block p-3 rounded-lg bg-white border border-blue-100 hover:bg-blue-50 transition-colors"
+                  >
+                    <p className="font-medium text-sm text-slate-900 truncate">{job.project.customer.name}</p>
+                    <p className="text-xs text-slate-500">{job.project.customer.projectAddress || "Address on file"}</p>
+                    <span className={`mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium ${ESTIMATE_STATUS_COLORS[job.status as keyof typeof ESTIMATE_STATUS_COLORS]}`}>
+                      {ESTIMATE_STATUS_LABELS[job.status as keyof typeof ESTIMATE_STATUS_LABELS]}
+                    </span>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+          )}
           <RevenueGoal monthRevenue={monthRevenue} goal={company?.monthlyRevenueGoal ?? null} />
           <Card>
             <CardHeader className="pb-2">
