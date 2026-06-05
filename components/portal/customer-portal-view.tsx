@@ -4,6 +4,13 @@ import Link from "next/link";
 import { Building2, FileText, CheckCircle, Clock, XCircle, CalendarDays, Phone, Mail, ExternalLink } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
+interface PortalPhoto {
+  id: string;
+  url: string;
+  caption: string | null;
+  photoType: string;
+}
+
 interface PortalEstimate {
   id: string;
   estimateNumber: string;
@@ -15,6 +22,7 @@ interface PortalEstimate {
   proposalToken: string | null;
   isWon: boolean;
   scheduledDate: string | null;
+  photos: PortalPhoto[];
 }
 
 interface PortalData {
@@ -88,6 +96,22 @@ export function CustomerPortalView({ data }: { data: PortalData }) {
             <ExternalLink className="w-4 h-4" />
             View Proposal
           </Link>
+        )}
+
+        {e.photos && e.photos.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-slate-400 mb-1.5">Job Photos</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {e.photos.slice(0, 6).map((ph) => (
+                <div key={ph.id} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100">
+                  <img src={ph.url} alt={ph.caption || ph.photoType} className="w-full h-full object-cover" />
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-xs px-1 py-0.5 text-center capitalize">
+                    {ph.photoType.toLowerCase().replace(/_/g, " ")}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         <p className="text-xs text-slate-400">Created {formatDate(e.createdAt)}</p>

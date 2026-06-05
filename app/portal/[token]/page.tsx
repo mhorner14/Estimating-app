@@ -12,7 +12,14 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
       projects: {
         include: {
           estimates: {
-            include: { proposal: true },
+            include: {
+              proposal: true,
+              photos: {
+                where: { photoType: { in: ["BEFORE", "AFTER", "PROPOSAL_VISIBLE"] } },
+                orderBy: { sortOrder: "asc" },
+                take: 12,
+              },
+            },
             orderBy: { createdAt: "desc" },
           },
         },
@@ -42,6 +49,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
         proposalToken: e.proposal?.publicToken ?? null,
         isWon: WON.includes(e.status),
         scheduledDate: e.scheduledDate ? e.scheduledDate.toISOString() : null,
+        photos: e.photos.map((ph) => ({ id: ph.id, url: ph.url, caption: ph.caption, photoType: ph.photoType })),
       }))
     ),
   };
