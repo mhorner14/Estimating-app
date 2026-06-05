@@ -31,6 +31,16 @@ interface ReportData {
   lostReasonData: Array<{ reason: string; count: number; pct: number }>;
   statusCounts: Record<string, number>;
   statusRevenue: Record<string, number>;
+  profitabilityData?: Array<{
+    id: string;
+    estimateNumber: string;
+    customerName: string;
+    revenue: number;
+    cost: number;
+    actualMargin: number | null;
+    estimatedMargin: number;
+    marginDiff: number | null;
+  }>;
   forecast?: {
     next30: number;
     next60: number;
@@ -422,6 +432,57 @@ export function ReportsDashboard() {
           </table>
         </CardContent>
       </Card>
+
+      {/* Job Profitability */}
+      {data.profitabilityData && data.profitabilityData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-600" />
+              Job Profitability (Completed Jobs with Cost Data)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-slate-50">
+                  <th className="text-left p-3 text-xs font-medium text-slate-500 uppercase">Job</th>
+                  <th className="text-right p-3 text-xs font-medium text-slate-500 uppercase">Revenue</th>
+                  <th className="text-right p-3 text-xs font-medium text-slate-500 uppercase">Cost</th>
+                  <th className="text-right p-3 text-xs font-medium text-slate-500 uppercase">Actual Margin</th>
+                  <th className="text-right p-3 text-xs font-medium text-slate-500 uppercase">vs Est.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.profitabilityData.map((job) => (
+                  <tr key={job.id} className="border-b last:border-0 hover:bg-slate-50">
+                    <td className="p-3">
+                      <p className="font-medium text-slate-900 text-xs">{job.customerName}</p>
+                      <p className="text-slate-400 text-xs">{job.estimateNumber}</p>
+                    </td>
+                    <td className="p-3 text-right text-slate-700">{formatCurrency(job.revenue)}</td>
+                    <td className="p-3 text-right text-slate-500">{formatCurrency(job.cost)}</td>
+                    <td className="p-3 text-right">
+                      {job.actualMargin !== null ? (
+                        <span className={`font-semibold ${job.actualMargin >= 30 ? "text-emerald-600" : job.actualMargin >= 15 ? "text-amber-600" : "text-red-500"}`}>
+                          {job.actualMargin.toFixed(1)}%
+                        </span>
+                      ) : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="p-3 text-right">
+                      {job.marginDiff !== null ? (
+                        <span className={`text-xs font-medium ${job.marginDiff >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                          {job.marginDiff >= 0 ? "+" : ""}{job.marginDiff.toFixed(1)}%
+                        </span>
+                      ) : <span className="text-slate-300">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Coach */}
       <Card>

@@ -146,6 +146,35 @@ export async function GET(req: NextRequest) {
     balanceOutstanding: scheduledJobs.reduce((s, j) => s + Number(j.balanceDue), 0),
   };
 
+  // Job profitability breakdown
+  const completedJobs = await prisma.estimate.findMany({
+    where: {
+      companyId,
+      status: { in: ["COMPLETED", "PAID_IN_FULL", "BALANCE_DUE"] },
+      actualTotalCost: { not: null },
+    },
+    include: { project: { include: { customer: { select: { name: true } } } } },
+    orderBy: { updatedAt: "desc" },
+    take: 30,
+  });
+
+  const profitabilityData = completedJobs.map((e) => {
+    const revenue = Number(e.totalAmount);
+    const cost = Number(e.actualTotalCost);
+    const actualMargin = cost > 0 ? ((revenue - cost) / revenue) * 100 : null;
+    const estimatedMargin = Number(e.estimatedMargin);
+    return {
+      id: e.id,
+      estimateNumber: e.estimateNumber,
+      customerName: e.project.customer.name,
+      revenue,
+      cost,
+      actualMargin,
+      estimatedMargin,
+      marginDiff: actualMargin !== null ? actualMargin - estimatedMargin : null,
+    };
+  });
+
   return NextResponse.json({
     summary: { totalCount, wonCount, lostCount, closeRate, totalWonRevenue, totalPending, avgMargin, avgJobSize, avgSatisfaction, ratedJobCount: ratedJobs.length },
     monthly,
@@ -154,5 +183,6 @@ export async function GET(req: NextRequest) {
     statusRevenue,
     lostReasonData,
     forecast,
+    profitabilityData,
   });
 }
