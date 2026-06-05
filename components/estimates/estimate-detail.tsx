@@ -95,6 +95,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [requestingReview, setRequestingReview] = useState(false);
   const [sendingSurvey, setSendingSurvey] = useState(false);
+  const [materialListOpen, setMaterialListOpen] = useState(false);
+  const [materialList, setMaterialList] = useState<any[]>([]);
+  const [generatingMaterials, setGeneratingMaterials] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [composePurpose, setComposePurpose] = useState("follow_up");
   const [composeCustom, setComposeCustom] = useState("");
@@ -352,6 +355,21 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
       setSendingSurvey(false);
+    }
+  }
+
+  async function openMaterialList() {
+    setMaterialListOpen(true);
+    if (materialList.length > 0) return;
+    setGeneratingMaterials(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/material-list`, { method: "POST" });
+      const data = await res.json();
+      if (data.materials) setMaterialList(data.materials);
+    } catch {
+      toast({ title: "Failed to generate material list", variant: "destructive" });
+    } finally {
+      setGeneratingMaterials(false);
     }
   }
 
@@ -653,6 +671,10 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                   {sendingSurvey ? "Sending..." : "Send Satisfaction Survey"}
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onClick={openMaterialList}>
+                <Download className="w-4 h-4 mr-2" />
+                AI Material List
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={deleteEstimate}
@@ -1543,6 +1565,62 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 Send Job Sheet
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {materialListOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Download className="w-5 h-5 text-blue-600" />
+                AI Material List
+              </h3>
+              <button onClick={() => setMaterialListOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+            </div>
+            {generatingMaterials ? (
+              <div className="flex items-center gap-3 py-8 justify-center text-slate-500">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating material list with AI...
+              </div>
+            ) : materialList.length > 0 ? (
+              <div className="space-y-3">
+                {["primer", "base_coat", "top_coat", "flake", "aggregate", "prep", "tools", "consumables"].map((cat) => {
+                  const items = materialList.filter((m: any) => m.category === cat);
+                  if (!items.length) return null;
+                  return (
+                    <div key={cat}>
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{cat.replace(/_/g, " ")}</p>
+                      {items.map((item: any, i: number) => (
+                        <div key={i} className="flex items-start justify-between py-2 border-b border-slate-100 last:border-0">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-slate-800">{item.name}</p>
+                            {item.notes && <p className="text-xs text-slate-400 mt-0.5">{item.notes}</p>}
+                          </div>
+                          <div className="ml-4 text-right flex-shrink-0">
+                            <span className="font-semibold text-slate-900 text-sm">{item.quantity}</span>
+                            <span className="text-slate-500 text-xs ml-1">{item.unit}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+                <div className="pt-2">
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => {
+                    const text = materialList.map((m: any) => `${m.quantity} ${m.unit} — ${m.name}${m.notes ? ` (${m.notes})` : ""}`).join("\n");
+                    navigator.clipboard.writeText(text);
+                    toast({ title: "Material list copied to clipboard" });
+                  }}>
+                    <Copy className="w-3.5 h-3.5 mr-1.5" />
+                    Copy to Clipboard
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 text-center py-8">No materials generated.</p>
+            )}
           </div>
         </div>
       )}
