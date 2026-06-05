@@ -11,7 +11,12 @@ export async function GET() {
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const [staleEstimates, needsClarification, scheduledToday, newLeads] = await Promise.all([
+  const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  const today = new Date();
+
+  const companyEstimateIds = (await prisma.estimate.findMany({ where: { companyId }, select: { id: true } })).map((e) => e.id);
+
+  const [staleEstimates, needsClarification, scheduledToday, newLeads, expiringProposals, balanceDue, recentSignatures] = await Promise.all([
     prisma.estimate.count({
       where: {
         companyId,
@@ -32,23 +37,40 @@ export async function GET() {
         },
       },
     }),
-    // New intake form leads in last 24h
     prisma.activityLog.count({
       where: {
         action: "intake_submitted",
         createdAt: { gte: oneDayAgo },
-        entityId: {
-          in: (await prisma.estimate.findMany({ where: { companyId }, select: { id: true } })).map((e) => e.id),
-        },
+        entityId: { in: companyEstimateIds },
+      },
+    }),
+    prisma.estimate.count({
+      where: {
+        companyId,
+        status: { in: ["SENT", "VIEWED"] },
+        validUntil: { gte: today, lte: threeDaysFromNow },
+      },
+    }),
+    prisma.estimate.count({
+      where: { companyId, status: "BALANCE_DUE" },
+    }),
+    prisma.activityLog.count({
+      where: {
+        action: "proposal_signed",
+        createdAt: { gte: oneDayAgo },
+        entityId: { in: companyEstimateIds },
       },
     }),
   ]);
 
   const items = [];
+  if (recentSignatures > 0) items.push({ type: "signature", message: `${recentSignatures} proposal${recentSignatures !== 1 ? "s" : ""} signed today`, href: "/estimates?status=ACCEPTED" });
+  if (newLeads > 0) items.push({ type: "lead", message: `${newLeads} new lead${newLeads !== 1 ? "s" : ""} from intake form`, href: "/estimates?status=DRAFT" });
+  if (scheduledToday > 0) items.push({ type: "scheduled", message: `${scheduledToday} job${scheduledToday !== 1 ? "s" : ""} scheduled today`, href: "/schedule" });
   if (staleEstimates > 0) items.push({ type: "stale", message: `${staleEstimates} estimate${staleEstimates !== 1 ? "s" : ""} awaiting response`, href: "/estimates?status=SENT" });
   if (needsClarification > 0) items.push({ type: "clarification", message: `${needsClarification} estimate${needsClarification !== 1 ? "s" : ""} need clarification`, href: "/estimates?status=NEEDS_CLARIFICATION" });
-  if (scheduledToday > 0) items.push({ type: "scheduled", message: `${scheduledToday} job${scheduledToday !== 1 ? "s" : ""} scheduled today`, href: "/schedule" });
-  if (newLeads > 0) items.push({ type: "lead", message: `${newLeads} new lead${newLeads !== 1 ? "s" : ""} from intake form`, href: "/estimates?status=DRAFT" });
+  if (expiringProposals > 0) items.push({ type: "expiring", message: `${expiringProposals} proposal${expiringProposals !== 1 ? "s" : ""} expiring within 3 days`, href: "/estimates" });
+  if (balanceDue > 0) items.push({ type: "payment", message: `${balanceDue} job${balanceDue !== 1 ? "s" : ""} with outstanding balance`, href: "/estimates?status=BALANCE_DUE" });
 
   return NextResponse.json({ count: items.length, items });
 }

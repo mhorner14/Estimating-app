@@ -54,6 +54,9 @@ export function NotificationBell() {
     lead: "🎯",
     clarification: "❓",
     scheduled: "📅",
+    signature: "✍️",
+    expiring: "⚠️",
+    payment: "💰",
   };
 
   return (
