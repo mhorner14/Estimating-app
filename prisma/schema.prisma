@@ -317,12 +317,31 @@ model Estimate {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  lineItems EstimateLineItem[]
-  proposal  Proposal?
-  signature Signature?
-  payments  Payment[]
-  photos    Photo[]
-  notes     Note[]
+  lineItems    EstimateLineItem[]
+  proposal     Proposal?
+  signature    Signature?
+  payments     Payment[]
+  photos       Photo[]
+  notes        Note[]
+  changeOrders ChangeOrder[]
+}
+
+model ChangeOrder {
+  id           String   @id @default(cuid())
+  estimateId   String
+  estimate     Estimate @relation(fields: [estimateId], references: [id])
+  number       String
+  description  String   @db.Text
+  amount       Float    @default(0)
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  approvedAt   DateTime?
+  signatureData String? @db.Text
+  signerName   String?
+  sentAt       DateTime?
+  publicToken  String   @unique @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lineItems    Json     @default("[]")
 }
 
 enum EstimateStatus {

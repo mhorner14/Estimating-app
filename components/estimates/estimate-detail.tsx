@@ -60,6 +60,7 @@ import { PhotoUpload } from "./photo-upload";
 import { JobCostsPanel } from "./job-costs-panel";
 import { PricingInsights } from "./pricing-insights";
 import { MaterialCalculator } from "./material-calculator";
+import { ChangeOrdersPanel } from "@/components/change-orders/change-orders-panel";
 
 interface EstimateDetailProps {
   estimate: any;
@@ -684,6 +685,11 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
           <TabsTrigger value="activity">
             Activity
           </TabsTrigger>
+          {["ACCEPTED","DEPOSIT_PAID","SCHEDULED","IN_PROGRESS","COMPLETED"].includes(estimate.status) && (
+            <TabsTrigger value="change-orders">
+              Change Orders
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Estimate Tab */}
@@ -1309,6 +1315,11 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
         <TabsContent value="activity">
           <ActivityFeed estimateId={estimate.id} />
         </TabsContent>
+        {["ACCEPTED","DEPOSIT_PAID","SCHEDULED","IN_PROGRESS","COMPLETED"].includes(estimate.status) && (
+          <TabsContent value="change-orders">
+            <ChangeOrdersPanel estimateId={estimate.id} />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Add Line Item Dialog */}
