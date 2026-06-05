@@ -308,7 +308,8 @@ model Estimate {
 
   validUntil  DateTime?
   lostReason  String?
-  crewNotes   String?  @db.Text
+  crewNotes         String?  @db.Text
+  satisfactionScore Int?
   version    Int      @default(1)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
