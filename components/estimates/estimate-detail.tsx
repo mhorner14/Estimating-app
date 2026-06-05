@@ -108,6 +108,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [crewMessage, setCrewMessage] = useState("");
   const [sendingCrew, setSendingCrew] = useState(false);
   const [savedCrew, setSavedCrew] = useState<Array<{ id: string; name: string; email: string | null }>>([]);
+  const [copiedCrewLink, setCopiedCrewLink] = useState(false);
   const [lostReason, setLostReason] = useState("");
   const [customLostReason, setCustomLostReason] = useState("");
 
@@ -591,6 +592,18 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 <DropdownMenuItem onClick={openCrewModal}>
                   <Users className="w-4 h-4 mr-2" />
                   Send Job Sheet to Crew
+                </DropdownMenuItem>
+              )}
+              {estimate.crewPhotoToken && ["ACCEPTED", "DEPOSIT_PAID", "SCHEDULED", "IN_PROGRESS", "COMPLETED"].includes(estimate.status) && (
+                <DropdownMenuItem onClick={() => {
+                  const url = `${window.location.origin}/crew-upload/${estimate.crewPhotoToken}`;
+                  navigator.clipboard.writeText(url);
+                  setCopiedCrewLink(true);
+                  setTimeout(() => setCopiedCrewLink(false), 2000);
+                  toast({ title: "Crew photo link copied" });
+                }}>
+                  {copiedCrewLink ? <Check className="w-4 h-4 mr-2 text-emerald-500" /> : <Camera className="w-4 h-4 mr-2" />}
+                  Copy Crew Photo Link
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={duplicateEstimate} disabled={duplicating}>

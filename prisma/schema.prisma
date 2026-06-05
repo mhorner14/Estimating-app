@@ -310,8 +310,9 @@ model Estimate {
   stripePaymentIntentId String?
   stripeDepositLinkId   String?
 
-  validUntil  DateTime?
-  lostReason  String?
+  validUntil      DateTime?
+  lostReason      String?
+  crewPhotoToken  String? @unique @default(cuid())
   crewNotes         String?  @db.Text
   satisfactionScore Int?
   version    Int      @default(1)
