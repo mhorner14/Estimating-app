@@ -1,95 +1,78 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const companyId = (session.user as any).companyId;
 
-  const members = await prisma.user.findMany({
-    where: { companyId },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const [members, invitations] = await Promise.all([
+    prisma.user.findMany({
+      where: { companyId },
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.invitation.findMany({
+      where: { companyId, acceptedAt: null, expiresAt: { gt: new Date() } },
+      select: { id: true, email: true, role: true, createdAt: true, expiresAt: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
-  return NextResponse.json(members);
+  return NextResponse.json({ members, invitations });
 }
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const companyId = (session.user as any).companyId;
   const currentRole = (session.user as any).role;
 
   if (!["OWNER", "ADMIN"].includes(currentRole)) {
-    return NextResponse.json({ error: "Only owners and admins can invite team members" }, { status: 403 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { name, email, role = "ESTIMATOR", password } = await req.json();
+  const { email, role } = await req.json();
+  if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
 
-  if (!email || !name) {
-    return NextResponse.json({ error: "Name and email required" }, { status: 400 });
-  }
+  const existing = await prisma.user.findFirst({ where: { email, companyId } });
+  if (existing) return NextResponse.json({ error: "User already on your team" }, { status: 409 });
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    if (existing.companyId === companyId) {
-      return NextResponse.json({ error: "User already on your team" }, { status: 400 });
-    }
-    // Add existing user to this company
-    const updated = await prisma.user.update({
-      where: { email },
-      data: { companyId, role },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
-    });
-    return NextResponse.json(updated);
-  }
-
-  // Create new user
-  const tempPassword = password || Math.random().toString(36).slice(-10);
-  const hashed = await bcrypt.hash(tempPassword, 10);
-
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashed,
-      role,
-      companyId,
-    },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  await prisma.invitation.deleteMany({
+    where: { companyId, email, acceptedAt: null },
   });
 
-  // Send invite email if Resend configured
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const invitation = await prisma.invitation.create({
+    data: {
+      companyId,
+      email,
+      role: role || "ESTIMATOR",
+      invitedBy: session.user.id,
+      expiresAt,
+    },
+  });
+
   if (process.env.RESEND_API_KEY) {
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const fromEmail = process.env.RESEND_FROM_EMAIL || "proposals@proestimate.app";
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://proestimate.app";
-
-    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { name: true } });
 
     await resend.emails.send({
-      from: fromEmail,
+      from: process.env.RESEND_FROM_EMAIL || "noreply@proestimate.app",
       to: email,
       subject: `You've been invited to join ${company?.name || "ProEstimate"}`,
       html: `<!DOCTYPE html><html><body style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
-  <h2>You've been invited!</h2>
-  <p>${(session.user as any).name || "Your team lead"} has invited you to join <strong>${company?.name || "their company"}</strong> on ProEstimate.</p>
-  <p>Login details:</p>
-  <ul>
-    <li>Email: <strong>${email}</strong></li>
-    <li>Temporary password: <strong>${tempPassword}</strong></li>
-  </ul>
-  <p><a href="${appUrl}/login" style="background:#2563eb;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:8px">Sign In</a></p>
-  <p style="color:#94a3b8;font-size:12px;margin-top:16px">Please change your password after signing in.</p>
+  <h2>You're invited!</h2>
+  <p><strong>${session.user.name || "A team member"}</strong> has invited you to join <strong>${company?.name || "their team"}</strong> on ProEstimate.</p>
+  <p style="color:#475569;">You'll be joining as: <strong>${role || "Estimator"}</strong></p>
+  <a href="${appUrl}/accept-invite/${invitation.token}" style="background:#2563eb;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px">Accept Invitation</a>
+  <p style="color:#94a3b8;font-size:12px;margin-top:16px">This invitation expires in 7 days.</p>
 </body></html>`,
     }).catch(() => {});
   }
 
-  return NextResponse.json({ ...user, tempPassword: !password ? tempPassword : undefined });
+  return NextResponse.json({ success: true, invitation });
 }

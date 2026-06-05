@@ -121,6 +121,7 @@ model Company {
   estimates         Estimate[]
   warrantyRules     WarrantyRule[]
   estimateTemplates EstimateTemplate[]
+  invitations       Invitation[]
 }
 
 // ─────────────────────────────────────────────
@@ -485,6 +486,19 @@ model ActivityLog {
   action     String
   metadata   Json?
   createdAt  DateTime @default(now())
+}
+
+model Invitation {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  email     String
+  role      UserRole @default(ESTIMATOR)
+  token     String   @unique @default(cuid())
+  invitedBy String?
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime @default(now())
 }
 
 model EstimateTemplate {
