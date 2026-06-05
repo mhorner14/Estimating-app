@@ -18,6 +18,8 @@ interface ReportData {
     avgJobSize: number;
     avgSatisfaction: number | null;
     ratedJobCount: number;
+    avgDaysToClose: number | null;
+    fastestClose: number | null;
   };
   monthly: Array<{
     month: string;
@@ -267,6 +269,20 @@ export function ReportsDashboard() {
                   <p className="text-xs text-slate-400 mt-0.5">{summary.ratedJobCount} survey{summary.ratedJobCount !== 1 ? "s" : ""} received</p>
                 </div>
                 <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-xl">⭐</div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {summary.avgDaysToClose !== null && (
+          <Card>
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Avg Days to Close</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">{summary.avgDaysToClose}<span className="text-lg font-normal text-slate-400 ml-1">days</span></p>
+                  {summary.fastestClose !== null && <p className="text-xs text-emerald-600 mt-0.5">Fastest: {summary.fastestClose}d</p>}
+                </div>
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-xl">⚡</div>
               </div>
             </CardContent>
           </Card>

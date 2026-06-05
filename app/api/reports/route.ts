@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const days = parseInt(period);
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const [allEstimates, recentEstimates, customers] = await Promise.all([
+  const [allEstimates, recentEstimates, customers, acceptedWithDates] = await Promise.all([
     prisma.estimate.findMany({
       where: { companyId },
       select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true, lostReason: true, satisfactionScore: true },
@@ -25,6 +25,12 @@ export async function GET(req: NextRequest) {
     prisma.customer.findMany({
       where: { companyId },
       select: { leadSource: true, createdAt: true },
+    }),
+    prisma.estimate.findMany({
+      where: { companyId, acceptedAt: { not: null } },
+      select: { createdAt: true, acceptedAt: true, totalAmount: true },
+      take: 100,
+      orderBy: { acceptedAt: "desc" },
     }),
   ]);
 
@@ -109,6 +115,15 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b[1] - a[1])
     .map(([reason, count]) => ({ reason, count, pct: lostCount > 0 ? Math.round((count / lostCount) * 100) : 0 }));
 
+  // Average time to close (days from created to accepted)
+  const closeTimes = acceptedWithDates
+    .filter((e) => e.acceptedAt)
+    .map((e) => (new Date(e.acceptedAt!).getTime() - new Date(e.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+  const avgDaysToClose = closeTimes.length > 0
+    ? Math.round(closeTimes.reduce((s, d) => s + d, 0) / closeTimes.length)
+    : null;
+  const fastestClose = closeTimes.length > 0 ? Math.round(Math.min(...closeTimes)) : null;
+
   // Forecast: scheduled/in-progress jobs with expected completion
   const now = new Date();
   const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -176,7 +191,7 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({
-    summary: { totalCount, wonCount, lostCount, closeRate, totalWonRevenue, totalPending, avgMargin, avgJobSize, avgSatisfaction, ratedJobCount: ratedJobs.length },
+    summary: { totalCount, wonCount, lostCount, closeRate, totalWonRevenue, totalPending, avgMargin, avgJobSize, avgSatisfaction, ratedJobCount: ratedJobs.length, avgDaysToClose, fastestClose },
     monthly,
     leadSourceData,
     statusCounts,
