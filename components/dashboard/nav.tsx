@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   CalendarDays,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -44,6 +45,7 @@ const navItems = [
   { href: "/estimates", label: "Estimates", icon: FileText },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/schedule", label: "Schedule", icon: CalendarDays },
+  { href: "/jobs", label: "Active Jobs", icon: Briefcase },
   { href: "/services", label: "Services & Pricing", icon: Wrench },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
