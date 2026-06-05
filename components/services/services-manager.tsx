@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { PlusCircle, Edit3, DollarSign, Loader2, ToggleLeft, ToggleRight, ArrowUp, ArrowDown } from "lucide-react";
+import { PlusCircle, Edit3, DollarSign, Loader2, ToggleLeft, ToggleRight, ArrowUp, ArrowDown, Globe } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import type { Service } from "@prisma/client";
@@ -260,6 +260,21 @@ export function ServicesManager({ services: initialServices, companyId }: Props)
                     ) : (
                       <ToggleLeft className="w-4 h-4 text-slate-400" />
                     )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    title={service.showOnRateCard ? "Remove from public rate card" : "Show on public rate card"}
+                    onClick={async () => {
+                      const res = await fetch(`/api/services/${service.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ showOnRateCard: !service.showOnRateCard }),
+                      });
+                      if (res.ok) setServices((prev) => prev.map((s) => s.id === service.id ? { ...s, showOnRateCard: !s.showOnRateCard } : s));
+                    }}
+                  >
+                    <Globe className={`w-3.5 h-3.5 ${service.showOnRateCard ? "text-blue-600" : "text-slate-300"}`} />
                   </Button>
                 </div>
               </div>

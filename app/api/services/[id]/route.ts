@@ -27,6 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.marginTarget !== undefined && { marginTarget: body.marginTarget }),
       ...(body.defaultWarranty !== undefined && { defaultWarranty: body.defaultWarranty }),
       ...(body.isActive !== undefined && { isActive: body.isActive }),
+      ...(body.showOnRateCard !== undefined && { showOnRateCard: body.showOnRateCard }),
     },
   });
 

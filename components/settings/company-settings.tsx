@@ -196,9 +196,14 @@ export function CompanySettings({ company }: Props) {
                   />
                 </div>
                 {form.intakeFormSlug && (
-                  <p className="text-xs text-blue-600">
-                    Share this link with leads: {process.env.NEXT_PUBLIC_APP_URL || ""}/intake/{form.intakeFormSlug}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-blue-600">
+                      Intake form: {process.env.NEXT_PUBLIC_APP_URL || ""}/intake/{form.intakeFormSlug}
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      Public rate card: {process.env.NEXT_PUBLIC_APP_URL || ""}/rates/{form.intakeFormSlug}
+                    </p>
+                  </div>
                 )}
                 <p className="text-xs text-slate-400">Customers fill out this form — their info and project details auto-create a draft estimate.</p>
               </div>

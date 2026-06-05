@@ -147,6 +147,7 @@ model Service {
   optionalUpgrades  Json?
   commonExclusions  Json?
   isActive         Boolean         @default(true)
+  showOnRateCard   Boolean         @default(false)
   sortOrder        Int             @default(0)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt

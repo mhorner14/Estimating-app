@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     include: {
       project: { include: { customer: true } },
       company: true,
-      payments: { where: { status: "COMPLETED" } },
+      payments: { where: { status: "PAID" } },
     },
   });
 
