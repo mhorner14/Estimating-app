@@ -106,6 +106,10 @@ model Company {
   intakeFormSlug      String?  @unique
   googleReviewUrl     String?
   yelpReviewUrl       String?
+  plan                String   @default("FREE") // FREE, STARTER, PRO, ENTERPRISE
+  stripeCustomerId    String?
+  stripeSubscriptionId String?
+  trialEndsAt         DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

@@ -19,6 +19,7 @@ import {
   X,
   CalendarDays,
   Briefcase,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -49,6 +50,7 @@ const navItems = [
   { href: "/services", label: "Services & Pricing", icon: Wrench },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/billing", label: "Billing", icon: CreditCard },
 ];
 
 function NavContent({ user, pathname, onClose }: { user: NavProps["user"]; pathname: string; onClose?: () => void }) {
