@@ -107,11 +107,12 @@ model Company {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  users         User[]
-  customers     Customer[]
-  services      Service[]
-  estimates     Estimate[]
-  warrantyRules WarrantyRule[]
+  users             User[]
+  customers         Customer[]
+  services          Service[]
+  estimates         Estimate[]
+  warrantyRules     WarrantyRule[]
+  estimateTemplates EstimateTemplate[]
 }
 
 // ─────────────────────────────────────────────
@@ -474,4 +475,16 @@ model ActivityLog {
   action     String
   metadata   Json?
   createdAt  DateTime @default(now())
+}
+
+model EstimateTemplate {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  description String?
+  lineItems Json     // Array of { serviceId, quantity, unitPrice, description }
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
