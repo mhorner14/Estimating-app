@@ -31,6 +31,14 @@ interface ReportData {
   lostReasonData: Array<{ reason: string; count: number; pct: number }>;
   statusCounts: Record<string, number>;
   statusRevenue: Record<string, number>;
+  forecast?: {
+    next30: number;
+    next60: number;
+    next90: number;
+    jobCount: number;
+    depositSecured: number;
+    balanceOutstanding: number;
+  };
 }
 
 const PERIOD_OPTIONS = [
@@ -227,6 +235,37 @@ export function ReportsDashboard() {
           </Card>
         )}
       </div>
+
+      {/* Revenue Forecast */}
+      {data.forecast && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-blue-600" />
+              Revenue Forecast
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              {[
+                { label: "Next 30 Days", value: data.forecast.next30 },
+                { label: "Next 60 Days", value: data.forecast.next60 },
+                { label: "Next 90 Days", value: data.forecast.next90 },
+              ].map((item) => (
+                <div key={item.label} className="text-center p-3 bg-slate-50 rounded-lg">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">{item.label}</p>
+                  <p className="text-xl font-bold text-slate-900">{formatCurrency(item.value)}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-6 text-sm text-slate-600">
+              <div><span className="font-semibold">{data.forecast.jobCount}</span> jobs in pipeline</div>
+              <div>Deposits secured: <span className="font-semibold text-emerald-600">{formatCurrency(data.forecast.depositSecured)}</span></div>
+              <div>Balance outstanding: <span className="font-semibold text-amber-600">{formatCurrency(data.forecast.balanceOutstanding)}</span></div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Monthly revenue chart */}
       <Card>

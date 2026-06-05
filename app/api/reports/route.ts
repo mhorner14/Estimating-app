@@ -109,6 +109,43 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b[1] - a[1])
     .map(([reason, count]) => ({ reason, count, pct: lostCount > 0 ? Math.round((count / lostCount) * 100) : 0 }));
 
+  // Forecast: scheduled/in-progress jobs with expected completion
+  const now = new Date();
+  const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const in60 = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+  const in90 = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+  const scheduledJobs = await prisma.estimate.findMany({
+    where: {
+      companyId,
+      status: { in: ["ACCEPTED", "DEPOSIT_PAID", "SCHEDULED", "IN_PROGRESS", "BALANCE_DUE"] },
+    },
+    select: { totalAmount: true, depositAmount: true, balanceDue: true, scheduledDate: true, status: true },
+  });
+
+  function forecastRevenue(jobs: typeof scheduledJobs, before: Date) {
+    return jobs.reduce((sum, job) => {
+      const scheduled = job.scheduledDate ? new Date(job.scheduledDate) : null;
+      if (scheduled && scheduled <= before) {
+        return sum + Number(job.totalAmount);
+      }
+      // No scheduled date — count ACCEPTED/DEPOSIT_PAID as likely within 30 days
+      if (!scheduled && ["ACCEPTED", "DEPOSIT_PAID"].includes(job.status)) {
+        return sum + Number(job.totalAmount);
+      }
+      return sum;
+    }, 0);
+  }
+
+  const forecast = {
+    next30: forecastRevenue(scheduledJobs, in30),
+    next60: forecastRevenue(scheduledJobs, in60),
+    next90: forecastRevenue(scheduledJobs, in90),
+    jobCount: scheduledJobs.length,
+    depositSecured: scheduledJobs.reduce((s, j) => s + Number(j.depositAmount), 0),
+    balanceOutstanding: scheduledJobs.reduce((s, j) => s + Number(j.balanceDue), 0),
+  };
+
   return NextResponse.json({
     summary: { totalCount, wonCount, lostCount, closeRate, totalWonRevenue, totalPending, avgMargin, avgJobSize, avgSatisfaction, ratedJobCount: ratedJobs.length },
     monthly,
@@ -116,5 +153,6 @@ export async function GET(req: NextRequest) {
     statusCounts,
     statusRevenue,
     lostReasonData,
+    forecast,
   });
 }
