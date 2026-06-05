@@ -36,6 +36,7 @@ import {
   MoreHorizontal,
   ArrowUp,
   ArrowDown,
+  Users,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -85,6 +86,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
     requestedTimeline: initialEstimate.requestedTimeline || "",
     squareFootage: String(initialEstimate.squareFootage || ""),
     scheduledDate: initialEstimate.scheduledDate ? new Date(initialEstimate.scheduledDate).toISOString().split("T")[0] : "",
+    validUntil: initialEstimate.validUntil ? new Date(initialEstimate.validUntil).toISOString().split("T")[0] : "",
   });
   const [savingJobDetails, setSavingJobDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -100,6 +102,10 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [sendingBalance, setSendingBalance] = useState(false);
   const [markLostOpen, setMarkLostOpen] = useState(false);
+  const [crewOpen, setCrewOpen] = useState(false);
+  const [crewEmails, setCrewEmails] = useState("");
+  const [crewMessage, setCrewMessage] = useState("");
+  const [sendingCrew, setSendingCrew] = useState(false);
   const [lostReason, setLostReason] = useState("");
   const [customLostReason, setCustomLostReason] = useState("");
 
@@ -331,6 +337,29 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
     }
   }
 
+  async function sendToCrew() {
+    const emails = crewEmails.split(/[\s,;]+/).filter((e) => e.includes("@"));
+    if (!emails.length) { toast({ title: "Enter at least one crew email", variant: "destructive" }); return; }
+    setSendingCrew(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/send-crew`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ crewEmails: emails, message: crewMessage }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast({ title: "Job sheet sent!", description: `Sent to ${emails.length} crew member${emails.length !== 1 ? "s" : ""}` });
+      setCrewOpen(false);
+      setCrewEmails("");
+      setCrewMessage("");
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingCrew(false);
+    }
+  }
+
   async function saveJobDetails() {
     setSavingJobDetails(true);
     try {
@@ -342,6 +371,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
           requestedTimeline: jobDetailsForm.requestedTimeline || null,
           squareFootage: jobDetailsForm.squareFootage ? parseFloat(jobDetailsForm.squareFootage) : null,
           scheduledDate: jobDetailsForm.scheduledDate || null,
+          validUntil: jobDetailsForm.validUntil || null,
         }),
       });
       if (!res.ok) throw new Error();
@@ -536,6 +566,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 <DropdownMenuItem onClick={() => { setComposeOpen(true); setComposedEmail(null); }}>
                   <MessageSquare className="w-4 h-4 mr-2" />
                   AI Email Composer
+                </DropdownMenuItem>
+              )}
+              {["ACCEPTED", "DEPOSIT_PAID", "SCHEDULED", "IN_PROGRESS"].includes(estimate.status) && (
+                <DropdownMenuItem onClick={() => setCrewOpen(true)}>
+                  <Users className="w-4 h-4 mr-2" />
+                  Send Job Sheet to Crew
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={duplicateEstimate} disabled={duplicating}>
@@ -818,6 +854,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                         requestedTimeline: estimate.requestedTimeline || "",
                         squareFootage: String(estimate.squareFootage || ""),
                         scheduledDate: estimate.scheduledDate ? new Date(estimate.scheduledDate).toISOString().split("T")[0] : "",
+                        validUntil: estimate.validUntil ? new Date(estimate.validUntil).toISOString().split("T")[0] : "",
                       });
                       setEditingJobDetails(true);
                     }}
@@ -864,6 +901,15 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                         className="h-8 text-sm"
                       />
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500">Proposal Valid Until</label>
+                      <Input
+                        type="date"
+                        value={jobDetailsForm.validUntil}
+                        onChange={(e) => setJobDetailsForm((f) => ({ ...f, validUntil: e.target.value }))}
+                        className="h-8 text-sm"
+                      />
+                    </div>
                     <div className="flex gap-2 pt-1">
                       <Button size="sm" onClick={saveJobDetails} disabled={savingJobDetails}>
                         {savingJobDetails ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3 h-3 mr-1" />Save</>}
@@ -897,6 +943,15 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                     <div>
                       <p className="text-slate-500">Scheduled Date</p>
                       <p className="font-medium">{new Date(estimate.scheduledDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                    </div>
+                  )}
+                  {estimate.validUntil && (
+                    <div>
+                      <p className="text-slate-500">Valid Until</p>
+                      <p className={`font-medium ${new Date(estimate.validUntil) < new Date() ? "text-red-600" : ""}`}>
+                        {new Date(estimate.validUntil).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {new Date(estimate.validUntil) < new Date() && " (expired)"}
+                      </p>
                     </div>
                   )}
                   <div>
@@ -1363,6 +1418,48 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {crewOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              Send Job Sheet to Crew
+            </h3>
+            <p className="text-sm text-slate-500">
+              Send job details, address, scope of work, and crew notes to your crew via email.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">Crew Email(s)</label>
+              <Textarea
+                value={crewEmails}
+                onChange={(e) => setCrewEmails(e.target.value)}
+                placeholder="crew@example.com, lead@example.com"
+                rows={2}
+                className="text-sm"
+              />
+              <p className="text-xs text-slate-400">Separate multiple emails with commas</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">Additional Message (optional)</label>
+              <Textarea
+                value={crewMessage}
+                onChange={(e) => setCrewMessage(e.target.value)}
+                placeholder="Any special instructions for the crew..."
+                rows={3}
+                className="text-sm"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setCrewOpen(false)}>Cancel</Button>
+              <Button className="flex-1" onClick={sendToCrew} disabled={sendingCrew || !crewEmails.trim()}>
+                {sendingCrew ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                Send Job Sheet
+              </Button>
+            </div>
           </div>
         </div>
       )}
