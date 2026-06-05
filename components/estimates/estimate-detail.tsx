@@ -57,6 +57,7 @@ import { EstimateNotes } from "./estimate-notes";
 import { PhotoUpload } from "./photo-upload";
 import { JobCostsPanel } from "./job-costs-panel";
 import { PricingInsights } from "./pricing-insights";
+import { MaterialCalculator } from "./material-calculator";
 
 interface EstimateDetailProps {
   estimate: any;
@@ -1105,6 +1106,9 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Material calculator */}
+              <MaterialCalculator squareFootage={estimate.squareFootage} />
 
               {/* Pricing insights */}
               {["DRAFT", "READY_FOR_REVIEW", "SENT", "VIEWED"].includes(estimate.status) && (
