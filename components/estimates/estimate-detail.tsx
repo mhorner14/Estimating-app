@@ -56,6 +56,7 @@ import { AIChat } from "./ai-chat";
 import { EstimateNotes } from "./estimate-notes";
 import { PhotoUpload } from "./photo-upload";
 import { JobCostsPanel } from "./job-costs-panel";
+import { PricingInsights } from "./pricing-insights";
 
 interface EstimateDetailProps {
   estimate: any;
@@ -1053,6 +1054,11 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Pricing insights */}
+              {["DRAFT", "READY_FOR_REVIEW", "SENT", "VIEWED"].includes(estimate.status) && (
+                <PricingInsights estimateId={estimate.id} totalAmount={Number(estimate.totalAmount)} />
+              )}
             </div>
           </div>
         </TabsContent>
