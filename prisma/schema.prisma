@@ -122,6 +122,7 @@ model Company {
   warrantyRules     WarrantyRule[]
   estimateTemplates EstimateTemplate[]
   invitations       Invitation[]
+  crewMembers       CrewMember[]
 }
 
 // ─────────────────────────────────────────────
@@ -486,6 +487,18 @@ model ActivityLog {
   action     String
   metadata   Json?
   createdAt  DateTime @default(now())
+}
+
+model CrewMember {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  email     String?
+  phone     String?
+  role      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 model Invitation {

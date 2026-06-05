@@ -106,6 +106,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [crewEmails, setCrewEmails] = useState("");
   const [crewMessage, setCrewMessage] = useState("");
   const [sendingCrew, setSendingCrew] = useState(false);
+  const [savedCrew, setSavedCrew] = useState<Array<{ id: string; name: string; email: string | null }>>([]);
   const [lostReason, setLostReason] = useState("");
   const [customLostReason, setCustomLostReason] = useState("");
 
@@ -334,6 +335,23 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
       setRequestingReview(false);
+    }
+  }
+
+  async function openCrewModal() {
+    setCrewOpen(true);
+    try {
+      const res = await fetch("/api/crew");
+      if (res.ok) setSavedCrew(await res.json());
+    } catch { /* non-fatal */ }
+  }
+
+  function toggleCrewMember(email: string) {
+    const current = crewEmails.split(/[\s,;]+/).filter(Boolean);
+    if (current.includes(email)) {
+      setCrewEmails(current.filter((e) => e !== email).join(", "));
+    } else {
+      setCrewEmails([...current, email].filter(Boolean).join(", "));
     }
   }
 
@@ -569,7 +587,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 </DropdownMenuItem>
               )}
               {["ACCEPTED", "DEPOSIT_PAID", "SCHEDULED", "IN_PROGRESS"].includes(estimate.status) && (
-                <DropdownMenuItem onClick={() => setCrewOpen(true)}>
+                <DropdownMenuItem onClick={openCrewModal}>
                   <Users className="w-4 h-4 mr-2" />
                   Send Job Sheet to Crew
                 </DropdownMenuItem>
@@ -1432,6 +1450,26 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
             <p className="text-sm text-slate-500">
               Send job details, address, scope of work, and crew notes to your crew via email.
             </p>
+            {savedCrew.filter((m) => m.email).length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700">Saved Crew</label>
+                <div className="flex flex-wrap gap-2">
+                  {savedCrew.filter((m) => m.email).map((m) => {
+                    const active = crewEmails.split(/[\s,;]+/).includes(m.email!);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => toggleCrewMember(m.email!)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}
+                      >
+                        {m.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">Crew Email(s)</label>
               <Textarea

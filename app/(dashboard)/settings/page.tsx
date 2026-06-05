@@ -5,6 +5,7 @@ import { WarrantyRulesManager } from "@/components/settings/warranty-rules-manag
 import { EmailTemplatesSettings } from "@/components/settings/email-templates-settings";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { TeamSettings } from "@/components/settings/team-settings";
+import { CrewSettings } from "@/components/settings/crew-settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function SettingsPage() {
@@ -38,6 +39,7 @@ export default async function SettingsPage() {
           <TabsTrigger value="emails">Email Templates</TabsTrigger>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="crew">Crew</TabsTrigger>
         </TabsList>
         <TabsContent value="company">
           <CompanySettings company={company as any} />
@@ -53,6 +55,9 @@ export default async function SettingsPage() {
         </TabsContent>
         <TabsContent value="team">
           <TeamSettings currentUserId={userId} currentUserRole={userRole} />
+        </TabsContent>
+        <TabsContent value="crew">
+          <CrewSettings />
         </TabsContent>
       </Tabs>
     </div>
