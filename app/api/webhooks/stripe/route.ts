@@ -29,6 +29,17 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as any;
     const { estimateId, paymentType } = session.metadata || {};
 
+    // Subscription checkout — upgrade company plan
+    if (session.mode === "subscription" && session.metadata?.companyId) {
+      await prisma.company.update({
+        where: { id: session.metadata.companyId },
+        data: {
+          plan: session.metadata.plan || "STARTER",
+          stripeSubscriptionId: session.subscription,
+        },
+      });
+    }
+
     if (!estimateId) return NextResponse.json({ ok: true });
 
     const estimate = await prisma.estimate.findUnique({ where: { id: estimateId } });
@@ -77,6 +88,36 @@ export async function POST(req: NextRequest) {
       where: { stripePaymentIntentId: intent.id },
       data: { status: "FAILED" },
     });
+  }
+
+  // Handle subscription lifecycle
+  if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
+    const sub = event.data.object as any;
+    const companyId = sub.metadata?.companyId;
+    const plan = sub.metadata?.plan;
+
+    if (companyId && plan) {
+      await prisma.company.update({
+        where: { id: companyId },
+        data: {
+          plan: sub.status === "active" || sub.status === "trialing" ? plan : "FREE",
+          stripeSubscriptionId: sub.id,
+          trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+        },
+      });
+    }
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const sub = event.data.object as any;
+    const companyId = sub.metadata?.companyId;
+
+    if (companyId) {
+      await prisma.company.update({
+        where: { id: companyId },
+        data: { plan: "FREE", stripeSubscriptionId: null },
+      });
+    }
   }
 
   return NextResponse.json({ ok: true });
