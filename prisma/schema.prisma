@@ -104,6 +104,8 @@ model Company {
   followUpEmailBody   String?  @db.Text
   monthlyRevenueGoal  Float?
   intakeFormSlug      String?  @unique
+  googleReviewUrl     String?
+  yelpReviewUrl       String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

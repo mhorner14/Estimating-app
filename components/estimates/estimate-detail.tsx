@@ -88,6 +88,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [requestingReview, setRequestingReview] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [sendingBalance, setSendingBalance] = useState(false);
   const [markLostOpen, setMarkLostOpen] = useState(false);
@@ -267,6 +268,20 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to save template", variant: "destructive" });
     } finally {
       setSavingTemplate(false);
+    }
+  }
+
+  async function requestReview() {
+    setRequestingReview(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/request-review`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast({ title: "Review request sent!", description: "Email sent to customer." });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setRequestingReview(false);
     }
   }
 
@@ -484,6 +499,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 <DropdownMenuItem onClick={sendBalanceRequest} disabled={sendingBalance}>
                   <DollarSign className="w-4 h-4 mr-2" />
                   {sendingBalance ? "Sending..." : "Send Balance Request"}
+                </DropdownMenuItem>
+              )}
+              {["COMPLETED", "PAID_IN_FULL"].includes(estimate.status) && estimate.project?.customer?.email && (
+                <DropdownMenuItem onClick={requestReview} disabled={requestingReview}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {requestingReview ? "Sending..." : "Request Google Review"}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

@@ -31,6 +31,8 @@ export function CompanySettings({ company }: Props) {
     serviceArea: company?.serviceArea || "",
     licenseNumber: company?.licenseNumber || "",
     intakeFormSlug: company?.intakeFormSlug || "",
+    googleReviewUrl: (company as any)?.googleReviewUrl || "",
+    yelpReviewUrl: (company as any)?.yelpReviewUrl || "",
     insuranceInfo: company?.insuranceInfo || "",
     defaultTerms: company?.defaultTerms || "",
     defaultPaymentTerms: company?.defaultPaymentTerms || "",
@@ -196,6 +198,15 @@ export function CompanySettings({ company }: Props) {
                   </p>
                 )}
                 <p className="text-xs text-slate-400">Customers fill out this form — their info and project details auto-create a draft estimate.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Google Review URL</Label>
+                <Input name="googleReviewUrl" value={form.googleReviewUrl} onChange={handleChange} placeholder="https://g.page/your-business/review" />
+              </div>
+              <div className="space-y-2">
+                <Label>Yelp Review URL</Label>
+                <Input name="yelpReviewUrl" value={form.yelpReviewUrl} onChange={handleChange} placeholder="https://www.yelp.com/biz/your-business" />
+                <p className="text-xs text-slate-400">Used for post-job review request emails.</p>
               </div>
             </div>
           </CardContent>
