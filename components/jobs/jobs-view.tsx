@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Phone, MapPin, ExternalLink, ChevronRight, CheckCircle, Loader2, Calendar, DollarSign, Layers } from "lucide-react";
+import { Phone, MapPin, ExternalLink, ChevronRight, CheckCircle, Loader2, Calendar, DollarSign, Layers, ClipboardEdit, Save } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -19,6 +20,7 @@ interface Job {
   colorSelection: string | null;
   scheduledDate: string | null;
   internalNotes: string | null;
+  crewNotes: string | null;
   customer: { name: string; phone: string | null; email: string | null };
   address: string;
   city: string;
@@ -36,6 +38,8 @@ export function JobsView({ jobs: initialJobs }: { jobs: Job[] }) {
   const { toast } = useToast();
   const [jobs, setJobs] = useState(initialJobs);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const [notesValue, setNotesValue] = useState("");
 
   async function advanceStatus(jobId: string, newStatus: string) {
     setUpdating(jobId);
@@ -57,6 +61,21 @@ export function JobsView({ jobs: initialJobs }: { jobs: Job[] }) {
       toast({ title: "Error updating status", variant: "destructive" });
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function saveCrewNotes(jobId: string) {
+    try {
+      await fetch(`/api/estimates/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ crewNotes: notesValue }),
+      });
+      setJobs((prev) => prev.map((j) => j.id === jobId ? { ...j, crewNotes: notesValue } : j));
+      toast({ title: "Crew notes saved" });
+      setEditingNotes(null);
+    } catch {
+      toast({ title: "Error saving notes", variant: "destructive" });
     }
   }
 
@@ -152,6 +171,35 @@ export function JobsView({ jobs: initialJobs }: { jobs: Job[] }) {
                 <div className="bg-amber-50 rounded-lg px-3 py-2 text-xs text-amber-800 border border-amber-100">
                   <p className="font-medium mb-0.5">Notes</p>
                   <p>{job.internalNotes}</p>
+                </div>
+              )}
+
+              {editingNotes === job.id ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={notesValue}
+                    onChange={(e) => setNotesValue(e.target.value)}
+                    placeholder="Crew instructions, prep steps, access codes..."
+                    rows={3}
+                    className="text-xs"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" className="h-7 text-xs flex-1" onClick={() => saveCrewNotes(job.id)}>
+                      <Save className="w-3 h-3 mr-1" />Save
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingNotes(null)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="flex items-start gap-2 cursor-pointer group"
+                  onClick={() => { setEditingNotes(job.id); setNotesValue(job.crewNotes || ""); }}
+                >
+                  <ClipboardEdit className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                  <p className="text-xs text-slate-400 group-hover:text-slate-600 transition-colors">
+                    {job.crewNotes || "Add crew notes…"}
+                  </p>
                 </div>
               )}
             </div>

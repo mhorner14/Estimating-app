@@ -32,6 +32,7 @@ export default async function JobsPage() {
     colorSelection: e.colorSelection,
     scheduledDate: e.scheduledDate?.toISOString() ?? null,
     internalNotes: e.internalNotes,
+    crewNotes: e.crewNotes,
     customer: {
       name: e.project.customer.name,
       phone: e.project.customer.phone,
