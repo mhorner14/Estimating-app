@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomersList } from "@/components/customers/customers-list";
+import { CustomerImportButton } from "@/components/customers/customer-import-button";
 
 export default async function CustomersPage() {
   const session = await auth();
@@ -27,11 +28,14 @@ export default async function CustomersPage() {
           <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
           <p className="text-slate-500 text-sm mt-1">{customers.length} customers</p>
         </div>
-        <Button asChild>
-          <Link href="/customers/new">
-            <PlusCircle className="w-4 h-4 mr-2" /> Add Customer
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <CustomerImportButton />
+          <Button asChild>
+            <Link href="/customers/new">
+              <PlusCircle className="w-4 h-4 mr-2" /> Add Customer
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {customers.length === 0 ? (

@@ -94,6 +94,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [duplicating, setDuplicating] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [requestingReview, setRequestingReview] = useState(false);
+  const [sendingSurvey, setSendingSurvey] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [composePurpose, setComposePurpose] = useState("follow_up");
   const [composeCustom, setComposeCustom] = useState("");
@@ -337,6 +338,20 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
       setRequestingReview(false);
+    }
+  }
+
+  async function sendSurvey() {
+    setSendingSurvey(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/send-survey`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast({ title: "Survey sent!", description: "Satisfaction survey emailed to customer." });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingSurvey(false);
     }
   }
 
@@ -630,6 +645,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 <DropdownMenuItem onClick={requestReview} disabled={requestingReview}>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   {requestingReview ? "Sending..." : "Request Google Review"}
+                </DropdownMenuItem>
+              )}
+              {["COMPLETED", "PAID_IN_FULL"].includes(estimate.status) && estimate.project?.customer?.email && (
+                <DropdownMenuItem onClick={sendSurvey} disabled={sendingSurvey}>
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  {sendingSurvey ? "Sending..." : "Send Satisfaction Survey"}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
