@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, X, Download, Clock } from "lucide-react";
+import { Search, X, Download, Clock, Mail, CheckSquare, Square, Loader2 } from "lucide-react";
 import { formatCurrency, formatDate, ESTIMATE_STATUS_LABELS, ESTIMATE_STATUS_COLORS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +64,8 @@ export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   async function changeStatus(id: string, status: string) {
     setUpdatingId(id);
@@ -103,6 +105,55 @@ export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
     a.download = `estimates-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === filtered.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(filtered.map((e) => e.id)));
+    }
+  }
+
+  async function bulkFollowUp() {
+    const ids = Array.from(selected);
+    setBulkLoading(true);
+    let sent = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/estimates/${id}/follow-up`, { method: "POST" });
+        if (res.ok) sent++;
+      } catch { /* non-fatal */ }
+    }
+    setBulkLoading(false);
+    setSelected(new Set());
+    toast({ title: `Follow-ups sent`, description: `Sent ${sent} of ${ids.length}` });
+  }
+
+  async function bulkChangeStatus(status: string) {
+    const ids = Array.from(selected);
+    setBulkLoading(true);
+    for (const id of ids) {
+      try {
+        await fetch(`/api/estimates/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+      } catch { /* non-fatal */ }
+    }
+    setEstimates((es) => es.map((e) => ids.includes(e.id) ? { ...e, status } : e));
+    setBulkLoading(false);
+    setSelected(new Set());
+    toast({ title: `${ids.length} estimates updated` });
   }
 
   const filtered = useMemo(() => {
@@ -160,9 +211,27 @@ export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
         </Button>
       </div>
 
-      <p className="text-xs text-slate-500">
-        {filtered.length} of {estimates.length} estimates
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500">
+          {filtered.length} of {estimates.length} estimates
+          {selected.size > 0 && ` · ${selected.size} selected`}
+        </p>
+        {selected.size > 0 && (
+          <div className="flex items-center gap-2">
+            {bulkLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
+            <Button size="sm" variant="outline" onClick={bulkFollowUp} disabled={bulkLoading}>
+              <Mail className="w-3.5 h-3.5 mr-1.5" /> Follow Up ({selected.size})
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => bulkChangeStatus("LOST")} disabled={bulkLoading}
+              className="text-red-600 border-red-200 hover:bg-red-50">
+              Mark Lost
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())} disabled={bulkLoading}>
+              Clear
+            </Button>
+          </div>
+        )}
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -175,6 +244,13 @@ export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-slate-50">
+                  <th className="w-10 p-4">
+                    <button onClick={toggleSelectAll} className="text-slate-400 hover:text-slate-600">
+                      {selected.size > 0 && selected.size === filtered.length
+                        ? <CheckSquare className="w-4 h-4 text-blue-600" />
+                        : <Square className="w-4 h-4" />}
+                    </button>
+                  </th>
                   <th className="text-left p-4 text-sm font-medium text-slate-600">Customer</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-600">Estimate #</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-600">Date</th>
@@ -184,7 +260,14 @@ export function EstimatesTable({ estimates: initial }: EstimatesTableProps) {
               </thead>
               <tbody>
                 {filtered.map((estimate) => (
-                  <tr key={estimate.id} className="border-b last:border-0 hover:bg-slate-50 transition-colors">
+                  <tr key={estimate.id} className={`border-b last:border-0 hover:bg-slate-50 transition-colors ${selected.has(estimate.id) ? "bg-blue-50" : ""}`}>
+                    <td className="p-4">
+                      <button onClick={() => toggleSelect(estimate.id)} className="text-slate-400 hover:text-blue-500">
+                        {selected.has(estimate.id)
+                          ? <CheckSquare className="w-4 h-4 text-blue-600" />
+                          : <Square className="w-4 h-4" />}
+                      </button>
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <Link href={`/estimates/${estimate.id}`} className="hover:underline font-medium text-slate-900">

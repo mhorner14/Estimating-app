@@ -53,11 +53,18 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             </p>
           )}
         </div>
-        <Button asChild>
-          <Link href={`/estimates/new?customerId=${customer.id}`}>
-            <PlusCircle className="w-4 h-4 mr-2" /> New Estimate
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/customers/${customer.id}/statement`}>
+              Statement
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/estimates/new?customerId=${customer.id}`}>
+              <PlusCircle className="w-4 h-4 mr-2" /> New Estimate
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
