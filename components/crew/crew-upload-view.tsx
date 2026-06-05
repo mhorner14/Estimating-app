@@ -31,6 +31,27 @@ export function CrewUploadView({ token, estimateNumber, customerName, address, c
   const [photoType, setPhotoType] = useState("AFTER");
   const [caption, setCaption] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [completionForm, setCompletionForm] = useState({ startTime: "", endTime: "", materialNotes: "", issuesNotes: "" });
+  const [submittingCompletion, setSubmittingCompletion] = useState(false);
+  const [completionSubmitted, setCompletionSubmitted] = useState(false);
+
+  async function submitCompletion() {
+    setSubmittingCompletion(true);
+    try {
+      const res = await fetch(`/api/crew-photos/${token}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completionForm),
+      });
+      if (!res.ok) throw new Error();
+      setCompletionSubmitted(true);
+      toast({ title: "Completion report submitted!" });
+    } catch {
+      toast({ title: "Failed to submit report", variant: "destructive" });
+    } finally {
+      setSubmittingCompletion(false);
+    }
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -180,11 +201,55 @@ export function CrewUploadView({ token, estimateNumber, customerName, address, c
         )}
 
         {photos.length > 0 && (
-          <div className="pb-8 flex items-center gap-2 text-sm text-emerald-600">
+          <div className="flex items-center gap-2 text-sm text-emerald-600">
             <CheckCircle className="w-4 h-4" />
             {photos.length} photo{photos.length > 1 ? "s" : ""} uploaded for this job
           </div>
         )}
+
+        {/* Completion Report */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-slate-500" />
+            Job Completion Report
+          </h2>
+          {completionSubmitted ? (
+            <div className="flex items-center gap-2 text-emerald-600 text-sm">
+              <CheckCircle className="w-4 h-4" /> Report submitted!
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Start Time</Label>
+                  <Input type="time" value={completionForm.startTime} onChange={(e) => setCompletionForm((f) => ({ ...f, startTime: e.target.value }))} className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">End Time</Label>
+                  <Input type="time" value={completionForm.endTime} onChange={(e) => setCompletionForm((f) => ({ ...f, endTime: e.target.value }))} className="h-9 text-sm" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Materials Used</Label>
+                <Input value={completionForm.materialNotes} onChange={(e) => setCompletionForm((f) => ({ ...f, materialNotes: e.target.value }))} placeholder="e.g. 3 gal epoxy, 2 lbs flake" className="h-9 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Issues / Notes</Label>
+                <Input value={completionForm.issuesNotes} onChange={(e) => setCompletionForm((f) => ({ ...f, issuesNotes: e.target.value }))} placeholder="Any problems or things to note..." className="h-9 text-sm" />
+              </div>
+              <Button
+                className="w-full bg-slate-900 hover:bg-slate-800"
+                onClick={submitCompletion}
+                disabled={submittingCompletion}
+              >
+                {submittingCompletion ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                Submit Completion Report
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="pb-8" />
       </div>
     </div>
   );
