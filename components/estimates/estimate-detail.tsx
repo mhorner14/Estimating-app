@@ -1994,14 +1994,25 @@ function ActivityFeed({ estimateId }: { estimateId: string }) {
       .catch(() => setLoading(false));
   }, [estimateId]);
 
-  function actionLabel(action: string, meta: any) {
-    if (action === "status_changed") {
-      return `Status changed from ${ESTIMATE_STATUS_LABELS[meta?.from] || meta?.from} → ${ESTIMATE_STATUS_LABELS[meta?.to] || meta?.to}`;
-    }
-    if (action === "payment_recorded") {
-      return `Payment recorded: ${meta?.type?.toLowerCase()} — $${Number(meta?.amount || 0).toFixed(2)}`;
-    }
-    return action.replace(/_/g, " ");
+  function actionLabel(action: string, meta: any): { text: string; dot: string } {
+    const map: Record<string, { text: string; dot: string }> = {
+      status_changed: { text: `Status: ${ESTIMATE_STATUS_LABELS[meta?.from] || meta?.from} → ${ESTIMATE_STATUS_LABELS[meta?.to] || meta?.to}`, dot: "bg-blue-400" },
+      payment_recorded: { text: `Payment recorded: ${meta?.paymentType?.toLowerCase() || ""} — $${Number(meta?.amount || 0).toFixed(2)}`, dot: "bg-emerald-500" },
+      proposal_sent: { text: "Proposal sent to customer", dot: "bg-blue-500" },
+      proposal_signed: { text: "Proposal signed by customer", dot: "bg-emerald-500" },
+      proposal_viewed: { text: "Customer viewed the proposal", dot: "bg-slate-400" },
+      follow_up_sent: { text: "Follow-up email sent", dot: "bg-amber-400" },
+      win_back_sent: { text: "Win-back email sent", dot: "bg-amber-400" },
+      survey_sent: { text: "Satisfaction survey sent", dot: "bg-purple-400" },
+      review_request_sent: { text: "Google review request sent", dot: "bg-yellow-400" },
+      crew_completion_submitted: { text: `Crew completion report submitted${meta?.startTime ? ` — ${meta.startTime}–${meta.endTime || "?"}` : ""}`, dot: "bg-slate-600" },
+      change_order_approved: { text: "Change order approved", dot: "bg-emerald-500" },
+      intake_submitted: { text: "Intake form submitted by customer", dot: "bg-blue-500" },
+      message_received: { text: "Customer sent a message", dot: "bg-purple-500" },
+      proposal_declined: { text: `Proposal declined${meta?.reason ? ` — "${meta.reason}"` : ""}`, dot: "bg-red-400" },
+      recoat_reminder_sent: { text: "Annual recoat reminder sent", dot: "bg-amber-300" },
+    };
+    return map[action] || { text: action.replace(/_/g, " "), dot: "bg-slate-300" };
   }
 
   return (
@@ -2018,19 +2029,22 @@ function ActivityFeed({ estimateId }: { estimateId: string }) {
           <p className="text-sm text-slate-400 text-center py-8">No activity recorded yet</p>
         ) : (
           <div className="space-y-3">
-            {logs.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 text-sm">
-                <div className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-slate-700">{actionLabel(log.action, log.metadata)}</p>
-                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
-                    {log.user?.name && <span>{log.user.name}</span>}
-                    {log.user?.name && <span>·</span>}
-                    <span>{formatDate(log.createdAt)}</span>
+            {logs.map((log) => {
+              const { text, dot } = actionLabel(log.action, log.metadata);
+              return (
+                <div key={log.id} className="flex items-start gap-3 text-sm">
+                  <div className={`w-2 h-2 rounded-full ${dot} mt-1.5 shrink-0`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-700">{text}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                      {log.user?.name && <span>{log.user.name}</span>}
+                      {log.user?.name && <span>·</span>}
+                      <span>{formatDate(log.createdAt)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>
