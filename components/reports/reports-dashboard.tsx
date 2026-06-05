@@ -16,6 +16,8 @@ interface ReportData {
     totalPending: number;
     avgMargin: number;
     avgJobSize: number;
+    avgSatisfaction: number | null;
+    ratedJobCount: number;
   };
   monthly: Array<{
     month: string;
@@ -209,6 +211,21 @@ export function ReportsDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {summary.avgSatisfaction !== null && (
+          <Card>
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Avg Satisfaction</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">{summary.avgSatisfaction} <span className="text-amber-400 text-2xl">★</span></p>
+                  <p className="text-xs text-slate-400 mt-0.5">{summary.ratedJobCount} survey{summary.ratedJobCount !== 1 ? "s" : ""} received</p>
+                </div>
+                <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-xl">⭐</div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Monthly revenue chart */}

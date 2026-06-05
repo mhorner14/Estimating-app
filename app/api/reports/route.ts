@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
   const [allEstimates, recentEstimates, customers] = await Promise.all([
     prisma.estimate.findMany({
       where: { companyId },
-      select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true, lostReason: true },
+      select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true, lostReason: true, satisfactionScore: true },
     }),
     prisma.estimate.findMany({
       where: { companyId, createdAt: { gte: since } },
-      select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true, lostReason: true },
+      select: { status: true, totalAmount: true, createdAt: true, estimatedMargin: true, lostReason: true, satisfactionScore: true },
       orderBy: { createdAt: "asc" },
     }),
     prisma.customer.findMany({
@@ -91,6 +91,12 @@ export async function GET(req: NextRequest) {
   const closeRate = (wonCount + lostCount) > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : 0;
   const avgJobSize = wonCount > 0 ? Math.round(totalWonRevenue / wonCount) : 0;
 
+  // Satisfaction score
+  const ratedJobs = allEstimates.filter((e) => e.satisfactionScore !== null && e.satisfactionScore !== undefined);
+  const avgSatisfaction = ratedJobs.length > 0
+    ? Math.round((ratedJobs.reduce((s, e) => s + Number(e.satisfactionScore), 0) / ratedJobs.length) * 10) / 10
+    : null;
+
   // Lost reason breakdown
   const lostReasons: Record<string, number> = {};
   for (const e of allEstimates) {
@@ -104,7 +110,7 @@ export async function GET(req: NextRequest) {
     .map(([reason, count]) => ({ reason, count, pct: lostCount > 0 ? Math.round((count / lostCount) * 100) : 0 }));
 
   return NextResponse.json({
-    summary: { totalCount, wonCount, lostCount, closeRate, totalWonRevenue, totalPending, avgMargin, avgJobSize },
+    summary: { totalCount, wonCount, lostCount, closeRate, totalWonRevenue, totalPending, avgMargin, avgJobSize, avgSatisfaction, ratedJobCount: ratedJobs.length },
     monthly,
     leadSourceData,
     statusCounts,
