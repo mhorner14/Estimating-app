@@ -95,10 +95,22 @@ function BarChart({ data, valueKey, labelKey, colorFn, formatValue }: {
   );
 }
 
+interface AIAnalysis {
+  headline: string;
+  closeRateAssessment: "good" | "average" | "needs_improvement";
+  insights: Array<{ title: string; body: string; type: "positive" | "warning" | "tip" }>;
+  recommendations: Array<{ priority: "high" | "medium" | "low"; action: string; why: string }>;
+  pricingInsight: string;
+  topLostReason: string | null;
+}
+
 export function ReportsDashboard() {
   const [period, setPeriod] = useState("90");
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -107,6 +119,21 @@ export function ReportsDashboard() {
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, [period]);
+
+  async function loadAiAnalysis() {
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const res = await fetch("/api/ai/win-loss-analysis");
+      const d = await res.json();
+      if (!res.ok) { setAiError(d.error || "Analysis failed"); return; }
+      setAiAnalysis(d);
+    } catch {
+      setAiError("Failed to load analysis");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   if (loading || !data) {
     return (
@@ -393,6 +420,87 @@ export function ReportsDashboard() {
               ))}
             </tbody>
           </table>
+        </CardContent>
+      </Card>
+
+      {/* AI Coach */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Award className="w-4 h-4 text-purple-600" />
+              AI Business Coach
+            </CardTitle>
+            {!aiAnalysis && (
+              <button
+                onClick={loadAiAnalysis}
+                disabled={aiLoading}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 transition-colors"
+              >
+                {aiLoading ? "Analyzing..." : "Run Analysis"}
+              </button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!aiAnalysis && !aiLoading && !aiError && (
+            <p className="text-sm text-slate-400 text-center py-6">
+              Click "Run Analysis" for AI-powered insights based on your win/loss patterns.
+            </p>
+          )}
+          {aiError && <p className="text-sm text-red-500">{aiError}</p>}
+          {aiLoading && (
+            <div className="flex items-center justify-center gap-2 py-8 text-slate-400 text-sm">
+              <BarChart3 className="w-4 h-4 animate-pulse" />
+              Analyzing your win/loss patterns...
+            </div>
+          )}
+          {aiAnalysis && (
+            <div className="space-y-5">
+              <div className={`p-3 rounded-lg text-sm font-medium ${
+                aiAnalysis.closeRateAssessment === "good" ? "bg-emerald-50 text-emerald-700" :
+                aiAnalysis.closeRateAssessment === "average" ? "bg-blue-50 text-blue-700" :
+                "bg-amber-50 text-amber-700"
+              }`}>
+                {aiAnalysis.headline}
+              </div>
+              {aiAnalysis.pricingInsight && (
+                <p className="text-sm text-slate-600 italic">{aiAnalysis.pricingInsight}</p>
+              )}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Key Insights</p>
+                {aiAnalysis.insights.map((ins, i) => (
+                  <div key={i} className={`p-3 rounded-lg text-sm border-l-2 ${
+                    ins.type === "positive" ? "bg-emerald-50 border-emerald-400 text-emerald-800" :
+                    ins.type === "warning" ? "bg-amber-50 border-amber-400 text-amber-800" :
+                    "bg-blue-50 border-blue-400 text-blue-800"
+                  }`}>
+                    <p className="font-semibold mb-0.5">{ins.title}</p>
+                    <p className="text-xs opacity-80">{ins.body}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Recommendations</p>
+                {aiAnalysis.recommendations.map((rec, i) => (
+                  <div key={i} className="flex gap-3 p-3 bg-slate-50 rounded-lg text-sm">
+                    <span className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${
+                      rec.priority === "high" ? "bg-red-100 text-red-700" :
+                      rec.priority === "medium" ? "bg-amber-100 text-amber-700" :
+                      "bg-slate-200 text-slate-600"
+                    }`}>{rec.priority}</span>
+                    <div>
+                      <p className="font-medium text-slate-900">{rec.action}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{rec.why}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => { setAiAnalysis(null); }} className="text-xs text-slate-400 hover:text-slate-600">
+                Refresh analysis
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
