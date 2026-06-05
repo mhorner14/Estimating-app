@@ -51,6 +51,7 @@ export function NotificationBell() {
 
   const TYPE_ICONS: Record<string, string> = {
     stale: "⏰",
+    lead: "🎯",
     clarification: "❓",
     scheduled: "📅",
   };
