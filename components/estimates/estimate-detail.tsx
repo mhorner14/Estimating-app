@@ -87,6 +87,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [savingJobDetails, setSavingJobDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [sendingBalance, setSendingBalance] = useState(false);
   const [markLostOpen, setMarkLostOpen] = useState(false);
@@ -241,6 +242,31 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
     } catch {
       toast({ title: "Error", description: "Failed to duplicate", variant: "destructive" });
       setDuplicating(false);
+    }
+  }
+
+  async function saveAsTemplate() {
+    const name = prompt("Template name:", `${estimate.project?.customer?.name || ""} – ${estimate.estimateNumber}`);
+    if (!name) return;
+    setSavingTemplate(true);
+    try {
+      const lineItems = estimate.lineItems.map((li: any) => ({
+        description: li.description || li.service?.name || "",
+        quantity: Number(li.quantity),
+        unitPrice: Number(li.unitPrice),
+        unit: li.unit || "sqft",
+        serviceId: li.serviceId || null,
+      }));
+      await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, lineItems, notes: estimate.internalNotes || "" }),
+      });
+      toast({ title: "Saved as template", description: name });
+    } catch {
+      toast({ title: "Error", description: "Failed to save template", variant: "destructive" });
+    } finally {
+      setSavingTemplate(false);
     }
   }
 
@@ -443,6 +469,10 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
               <DropdownMenuItem onClick={duplicateEstimate} disabled={duplicating}>
                 <CopyPlus className="w-4 h-4 mr-2" />
                 {duplicating ? "Duplicating..." : "Duplicate Estimate"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={saveAsTemplate} disabled={savingTemplate}>
+                <FileText className="w-4 h-4 mr-2" />
+                {savingTemplate ? "Saving..." : "Save as Template"}
               </DropdownMenuItem>
               {["SENT", "VIEWED"].includes(estimate.status) && estimate.project?.customer?.email && (
                 <DropdownMenuItem onClick={sendFollowUp} disabled={sendingFollowUp}>
