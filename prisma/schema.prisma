@@ -103,6 +103,7 @@ model Company {
   followUpEmailSubject String?
   followUpEmailBody   String?  @db.Text
   monthlyRevenueGoal  Float?
+  intakeFormSlug      String?  @unique
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

@@ -30,6 +30,7 @@ export function CompanySettings({ company }: Props) {
     zip: company?.zip || "",
     serviceArea: company?.serviceArea || "",
     licenseNumber: company?.licenseNumber || "",
+    intakeFormSlug: company?.intakeFormSlug || "",
     insuranceInfo: company?.insuranceInfo || "",
     defaultTerms: company?.defaultTerms || "",
     defaultPaymentTerms: company?.defaultPaymentTerms || "",
@@ -176,6 +177,25 @@ export function CompanySettings({ company }: Props) {
               <div className="col-span-2 space-y-2">
                 <Label>Insurance Info</Label>
                 <Input name="insuranceInfo" value={form.insuranceInfo} onChange={handleChange} placeholder="Fully insured, $2M liability" />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Customer Intake Form URL Slug</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400 whitespace-nowrap">/intake/</span>
+                  <Input
+                    name="intakeFormSlug"
+                    value={form.intakeFormSlug}
+                    onChange={handleChange}
+                    placeholder="your-company-name"
+                    className="flex-1"
+                  />
+                </div>
+                {form.intakeFormSlug && (
+                  <p className="text-xs text-blue-600">
+                    Share this link with leads: {process.env.NEXT_PUBLIC_APP_URL || ""}/intake/{form.intakeFormSlug}
+                  </p>
+                )}
+                <p className="text-xs text-slate-400">Customers fill out this form — their info and project details auto-create a draft estimate.</p>
               </div>
             </div>
           </CardContent>
