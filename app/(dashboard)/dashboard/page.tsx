@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 import { RevenueGoal } from "@/components/dashboard/revenue-goal";
+import { PipelineFunnel } from "@/components/dashboard/pipeline-funnel";
 import {
   FileText,
   DollarSign,
@@ -245,6 +246,14 @@ export default async function DashboardPage() {
 
         <div className="space-y-4">
           <RevenueGoal monthRevenue={monthRevenue} goal={company?.monthlyRevenueGoal ?? null} />
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Pipeline</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PipelineFunnel estimates={allEstimates.map((e) => ({ status: e.status, totalAmount: Number(e.totalAmount) }))} />
+            </CardContent>
+          </Card>
           <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
