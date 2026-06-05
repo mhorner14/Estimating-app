@@ -198,6 +198,7 @@ model Customer {
   billingAddress String?
   leadSource     String?
   tags           String[] @default([])
+  portalToken    String?  @unique
   notes          String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, MapPin, Tag, Pencil, Loader2, Trash2, X } from "lucide-react";
+import { Phone, Mail, MapPin, Tag, Pencil, Loader2, Trash2, X, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Customer {
@@ -30,6 +30,8 @@ export function CustomerContactCard({ customer: initial }: { customer: Customer 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [portalLinking, setPortalLinking] = useState(false);
+  const [portalCopied, setPortalCopied] = useState(false);
   const [form, setForm] = useState<Customer & { tags: string[] }>({ ...initial, tags: initial.tags ?? [] });
   const [tagInput, setTagInput] = useState("");
 
@@ -80,6 +82,22 @@ export function CustomerContactCard({ customer: initial }: { customer: Customer 
     } catch {
       toast({ title: "Error", description: "Failed to delete", variant: "destructive" });
       setDeleting(false);
+    }
+  }
+
+  async function copyPortalLink() {
+    setPortalLinking(true);
+    try {
+      const res = await fetch(`/api/customers/${customer.id}/portal-link`, { method: "POST" });
+      const data = await res.json();
+      await navigator.clipboard.writeText(data.url);
+      setPortalCopied(true);
+      toast({ title: "Portal link copied!", description: "Send this link to your customer." });
+      setTimeout(() => setPortalCopied(false), 3000);
+    } catch {
+      toast({ title: "Error", description: "Failed to generate portal link", variant: "destructive" });
+    } finally {
+      setPortalLinking(false);
     }
   }
 
@@ -203,16 +221,26 @@ export function CustomerContactCard({ customer: initial }: { customer: Customer 
                 <p className="text-slate-600 text-xs">{customer.notes}</p>
               </div>
             )}
-            <div className="pt-2 border-t">
+            <div className="pt-2 border-t flex items-center gap-2 flex-wrap">
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-red-500 hover:text-red-600 hover:bg-red-50 h-7 text-xs"
+                className="h-7 text-xs text-slate-600 hover:text-slate-800"
+                onClick={copyPortalLink}
+                disabled={portalLinking}
+              >
+                {portalLinking ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Link2 className="w-3 h-3 mr-1" />}
+                {portalCopied ? "Copied!" : "Copy Portal Link"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 h-7 text-xs ml-auto"
                 onClick={deleteCustomer}
                 disabled={deleting}
               >
                 {deleting ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Trash2 className="w-3 h-3 mr-1" />}
-                Delete Customer
+                Delete
               </Button>
             </div>
           </>
