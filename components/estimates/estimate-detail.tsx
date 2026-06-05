@@ -118,6 +118,7 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachData, setCoachData] = useState<any>(null);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
 
   const aiSuggestions = estimate.aiSuggestions as any;
 
@@ -189,6 +190,20 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to generate proposal", variant: "destructive" });
     } finally {
       setGeneratingProposal(false);
+    }
+  }
+
+  async function sendStripeInvoice() {
+    setSendingInvoice(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/send-invoice`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast({ title: "Invoice sent!", description: "Stripe invoice emailed to customer." });
+    } catch (e: any) {
+      toast({ title: "Failed to send invoice", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingInvoice(false);
     }
   }
 
@@ -682,6 +697,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 <DropdownMenuItem onClick={sendBalanceRequest} disabled={sendingBalance}>
                   <DollarSign className="w-4 h-4 mr-2" />
                   {sendingBalance ? "Sending..." : "Send Balance Request"}
+                </DropdownMenuItem>
+              )}
+              {["COMPLETED", "BALANCE_DUE", "PAID_IN_FULL"].includes(estimate.status) && estimate.project?.customer?.email && (
+                <DropdownMenuItem onClick={sendStripeInvoice} disabled={sendingInvoice}>
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  {sendingInvoice ? "Sending..." : "Send Stripe Invoice"}
                 </DropdownMenuItem>
               )}
               {["COMPLETED", "PAID_IN_FULL"].includes(estimate.status) && estimate.project?.customer?.email && (
