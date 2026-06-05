@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft,
@@ -90,6 +91,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
   const [duplicating, setDuplicating] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [requestingReview, setRequestingReview] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composePurpose, setComposePurpose] = useState("follow_up");
+  const [composeCustom, setComposeCustom] = useState("");
+  const [composedEmail, setComposedEmail] = useState<{ subject: string; body: string } | null>(null);
+  const [composing, setComposing] = useState(false);
+  const [sendingComposed, setSendingComposed] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [sendingBalance, setSendingBalance] = useState(false);
   const [markLostOpen, setMarkLostOpen] = useState(false);
@@ -269,6 +276,44 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
       toast({ title: "Error", description: "Failed to save template", variant: "destructive" });
     } finally {
       setSavingTemplate(false);
+    }
+  }
+
+  async function composeEmail() {
+    setComposing(true);
+    setComposedEmail(null);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/compose-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purpose: composePurpose, customContext: composeCustom }),
+      });
+      const data = await res.json();
+      setComposedEmail(data);
+    } catch {
+      toast({ title: "Error composing email", variant: "destructive" });
+    } finally {
+      setComposing(false);
+    }
+  }
+
+  async function sendComposedEmail() {
+    if (!composedEmail || !estimate.project?.customer?.email) return;
+    setSendingComposed(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/send-custom-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: composedEmail.subject, body: composedEmail.body }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Email sent!", description: `Sent to ${estimate.project.customer.email}` });
+      setComposeOpen(false);
+      setComposedEmail(null);
+    } catch {
+      toast({ title: "Error sending email", variant: "destructive" });
+    } finally {
+      setSendingComposed(false);
     }
   }
 
@@ -465,6 +510,11 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
             <Button variant="outline" asChild>
               <a href={proposalLink} target="_blank" rel="noreferrer">
                 <ExternalLink className="mr-2 w-4 h-4" /> View Proposal
+                {estimate.proposal?.viewCount > 0 && (
+                  <span className="ml-2 bg-slate-100 text-slate-600 text-xs px-1.5 py-0.5 rounded-full">
+                    {estimate.proposal.viewCount} view{estimate.proposal.viewCount !== 1 ? "s" : ""}
+                  </span>
+                )}
               </a>
             </Button>
           )}
@@ -482,6 +532,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {estimate.project?.customer?.email && (
+                <DropdownMenuItem onClick={() => { setComposeOpen(true); setComposedEmail(null); }}>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  AI Email Composer
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={duplicateEstimate} disabled={duplicating}>
                 <CopyPlus className="w-4 h-4 mr-2" />
                 {duplicating ? "Duplicating..." : "Duplicate Estimate"}
@@ -1228,6 +1284,85 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Lost"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Email Composer Modal */}
+      {composeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">AI Email Composer</h2>
+            <p className="text-sm text-slate-500 mb-4">Generate a personalized email for {estimate.project?.customer?.name}</p>
+
+            {!composedEmail ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-2 block">What type of email?</label>
+                  <div className="space-y-2">
+                    {[
+                      { id: "send_proposal", label: "Introduce & send proposal" },
+                      { id: "follow_up", label: "Follow up on sent proposal" },
+                      { id: "check_in", label: "Check in after job completion" },
+                      { id: "custom", label: "Custom (describe below)" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => setComposePurpose(opt.id)}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${composePurpose === opt.id ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 hover:border-slate-300 text-slate-700"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {composePurpose === "custom" && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1 block">Describe the email</label>
+                    <Textarea
+                      placeholder="e.g. Ask about their timeline and offer a discount if they book this week"
+                      value={composeCustom}
+                      onChange={(e) => setComposeCustom(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setComposeOpen(false)}>Cancel</Button>
+                  <Button className="flex-1" onClick={composeEmail} disabled={composing}>
+                    {composing ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Writing…</> : "✨ Generate Email"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">Subject</label>
+                  <Input
+                    value={composedEmail.subject}
+                    onChange={(e) => setComposedEmail({ ...composedEmail, subject: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1 block">Body</label>
+                  <Textarea
+                    value={composedEmail.body}
+                    onChange={(e) => setComposedEmail({ ...composedEmail, body: e.target.value })}
+                    rows={8}
+                    className="text-sm"
+                  />
+                </div>
+                <p className="text-xs text-slate-400">To: {estimate.project?.customer?.email}</p>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setComposedEmail(null)}>Regenerate</Button>
+                  <Button variant="outline" onClick={() => setComposeOpen(false)}>Cancel</Button>
+                  <Button className="flex-1" onClick={sendComposedEmail} disabled={sendingComposed}>
+                    {sendingComposed ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                    Send Email
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
