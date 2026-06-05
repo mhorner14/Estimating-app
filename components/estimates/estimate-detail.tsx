@@ -696,6 +696,12 @@ export function EstimateDetail({ estimate: initialEstimate, services }: Estimate
                   {sendingSurvey ? "Sending..." : "Send Satisfaction Survey"}
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem asChild>
+                <a href={`/estimates/${estimate.id}/job-sheet`} target="_blank" rel="noreferrer">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Print Job Sheet
+                </a>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={openMaterialList}>
                 <Download className="w-4 h-4 mr-2" />
                 AI Material List
