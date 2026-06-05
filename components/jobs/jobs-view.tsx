@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Phone, MapPin, ExternalLink, ChevronRight, CheckCircle, Loader2, Calendar, DollarSign, Layers, ClipboardEdit, Save } from "lucide-react";
+import { Phone, MapPin, ExternalLink, ChevronRight, CheckCircle, Loader2, Calendar, DollarSign, Layers, ClipboardEdit, Save, MessageSquare } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -135,10 +135,34 @@ export function JobsView({ jobs: initialJobs }: { jobs: Job[] }) {
               )}
 
               {job.customer.phone && (
-                <a href={`tel:${job.customer.phone}`} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
-                  <Phone className="w-4 h-4" />
-                  {job.customer.phone}
-                </a>
+                <div className="flex items-center gap-3">
+                  <a href={`tel:${job.customer.phone}`} className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700">
+                    <Phone className="w-4 h-4" />
+                    {job.customer.phone}
+                  </a>
+                  <a
+                    href={`sms:${job.customer.phone}?body=${encodeURIComponent(
+                      job.scheduledDate
+                        ? `Hi ${job.customer.name.split(" ")[0]}, just a reminder your floor coating appointment is scheduled for ${formatDate(job.scheduledDate)}. Let us know if you have any questions!`
+                        : `Hi ${job.customer.name.split(" ")[0]}, this is a message from your contractor. Feel free to reach out with any questions!`
+                    )}`}
+                    className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-md transition-colors"
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    SMS
+                  </a>
+                  {job.balanceDue > 0 && (
+                    <a
+                      href={`sms:${job.customer.phone}?body=${encodeURIComponent(
+                        `Hi ${job.customer.name.split(" ")[0]}, you have a remaining balance of $${job.balanceDue.toFixed(2)} on your recent project. Please let us know how you'd like to proceed with payment. Thank you!`
+                      )}`}
+                      className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded-md transition-colors"
+                    >
+                      <MessageSquare className="w-3 h-3" />
+                      Balance SMS
+                    </a>
+                  )}
+                </div>
               )}
 
               <div className="grid grid-cols-3 gap-2 pt-1">
