@@ -31,6 +31,10 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
   const [customerMessage, setCustomerMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [messageSent, setMessageSent] = useState(false);
+  const [declineOpen, setDeclineOpen] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [declining, setDeclining] = useState(false);
+  const [declined, setDeclined] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
@@ -131,6 +135,24 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
       toast({ title: "Error", description: "Failed to submit signature", variant: "destructive" });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function declineProposal() {
+    setDeclining(true);
+    try {
+      const res = await fetch(`/api/proposals/${proposal.publicToken}/decline`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: declineReason }),
+      });
+      if (!res.ok) throw new Error();
+      setDeclined(true);
+      setDeclineOpen(false);
+    } catch {
+      toast({ title: "Failed to decline", variant: "destructive" });
+    } finally {
+      setDeclining(false);
     }
   }
 
@@ -576,11 +598,53 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
                     <><CheckCircle className="mr-2 w-4 h-4" /> Accept Proposal & Sign</>
                   )}
                 </Button>
+
+                {!declined && (
+                  <div className="text-center pt-2">
+                    <button
+                      onClick={() => setDeclineOpen(true)}
+                      className="text-xs text-slate-400 hover:text-slate-600 underline"
+                    >
+                      Not interested in this proposal?
+                    </button>
+                  </div>
+                )}
+                {declined && (
+                  <p className="text-xs text-center text-slate-400">This proposal has been marked as declined.</p>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {declineOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+            <h3 className="font-bold text-slate-900">Decline This Proposal?</h3>
+            <p className="text-sm text-slate-500">Would you like to let us know why? This helps us improve (optional).</p>
+            <textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              placeholder="The price was too high / Going with another contractor / Decided not to proceed..."
+              rows={3}
+              className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setDeclineOpen(false)} className="flex-1">Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={declineProposal}
+                disabled={declining}
+                className="flex-1"
+              >
+                {declining ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
+                Decline Proposal
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
