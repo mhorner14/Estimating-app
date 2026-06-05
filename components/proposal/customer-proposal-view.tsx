@@ -28,6 +28,9 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
   const [accepted, setAccepted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [payingDeposit, setPayingDeposit] = useState(false);
+  const [customerMessage, setCustomerMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [messageSent, setMessageSent] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
@@ -128,6 +131,26 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
       toast({ title: "Error", description: "Failed to submit signature", variant: "destructive" });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function sendMessage() {
+    if (!customerMessage.trim()) return;
+    setSendingMessage(true);
+    try {
+      const res = await fetch(`/api/proposals/${proposal.publicToken}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: customerMessage, senderName: customer.name }),
+      });
+      if (!res.ok) throw new Error();
+      setMessageSent(true);
+      setCustomerMessage("");
+      toast({ title: "Message sent!", description: "We'll get back to you soon." });
+    } catch {
+      toast({ title: "Failed to send message", variant: "destructive" });
+    } finally {
+      setSendingMessage(false);
     }
   }
 
@@ -429,6 +452,42 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
                 <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{estimate.exclusions}</p>
               </div>
             )}
+
+            <Separator />
+
+            {/* Ask a Question */}
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                <Mail className="w-5 h-5 text-blue-600" />
+                Have Questions?
+              </h3>
+              <p className="text-slate-500 text-sm mb-4">Send us a message and we'll get back to you quickly.</p>
+              {messageSent ? (
+                <div className="flex items-center gap-2 text-emerald-600 text-sm bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  Message sent! We'll be in touch soon.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <textarea
+                    value={customerMessage}
+                    onChange={(e) => setCustomerMessage(e.target.value)}
+                    placeholder="I have a question about..."
+                    rows={3}
+                    className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={sendMessage}
+                    disabled={!customerMessage.trim() || sendingMessage}
+                    className="w-full"
+                  >
+                    {sendingMessage ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}
+                    Send Message
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <Separator />
 
