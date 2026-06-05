@@ -94,6 +94,25 @@ export function BillingView({
 
   const currentPlan = PLANS.find((p) => p.id === plan);
   const [openingPortal, setOpeningPortal] = useState(false);
+  const [upgradingTo, setUpgradingTo] = useState<string | null>(null);
+
+  async function startUpgrade(planId: string) {
+    setUpgradingTo(planId);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert(data.error || "Unable to start checkout. Please contact support.");
+    } catch {
+      alert("Unable to start checkout. Please contact support.");
+    } finally {
+      setUpgradingTo(null);
+    }
+  }
 
   async function openBillingPortal() {
     setOpeningPortal(true);
@@ -198,12 +217,10 @@ export function BillingView({
                     <Button
                       className={`w-full ${p.badge ? "bg-purple-600 hover:bg-purple-700" : ""}`}
                       variant={p.badge ? "default" : "outline"}
-                      disabled={isCurrent}
-                      onClick={() => {
-                        // In production, this would redirect to Stripe Checkout for subscriptions
-                        alert(`Contact us to upgrade to ${p.name}: hello@proestimate.app`);
-                      }}
+                      disabled={isCurrent || upgradingTo === p.id}
+                      onClick={() => !isCurrent && startUpgrade(p.id)}
                     >
+                      {upgradingTo === p.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                       {isCurrent ? "Current Plan" : `Upgrade to ${p.name}`}
                     </Button>
                   </CardContent>
