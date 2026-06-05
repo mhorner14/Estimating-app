@@ -11,7 +11,7 @@ export default async function NewEstimatePage({
   const session = await auth();
   const companyId = (session?.user as any)?.companyId;
 
-  const [customers, services] = await Promise.all([
+  const [customers, services, templates] = await Promise.all([
     prisma.customer.findMany({
       where: { companyId },
       orderBy: { name: "asc" },
@@ -20,7 +20,19 @@ export default async function NewEstimatePage({
       where: { companyId, isActive: true },
       orderBy: { sortOrder: "asc" },
     }),
+    prisma.estimateTemplate.findMany({
+      where: { companyId },
+      orderBy: { name: "asc" },
+    }),
   ]);
+
+  const serializedTemplates = templates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description ?? null,
+    lineItems: t.lineItems as any[],
+    notes: t.notes ?? null,
+  }));
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -30,7 +42,7 @@ export default async function NewEstimatePage({
           Describe the job in your own words — the AI will structure it for you
         </p>
       </div>
-      <NewEstimateWizard customers={customers} services={services} preselectedCustomerId={customerId} />
+      <NewEstimateWizard customers={customers} services={services} templates={serializedTemplates} preselectedCustomerId={customerId} />
     </div>
   );
 }

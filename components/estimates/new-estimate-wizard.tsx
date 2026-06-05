@@ -37,13 +37,22 @@ interface AIResult {
   isComplete: boolean;
 }
 
+interface EstimateTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  lineItems: Array<{ serviceId?: string; description: string; quantity: number; unitPrice: number }>;
+  notes: string | null;
+}
+
 interface Props {
   customers: Customer[];
   services: Service[];
+  templates?: EstimateTemplate[];
   preselectedCustomerId?: string;
 }
 
-export function NewEstimateWizard({ customers, services, preselectedCustomerId }: Props) {
+export function NewEstimateWizard({ customers, services, templates = [], preselectedCustomerId }: Props) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -307,6 +316,30 @@ export function NewEstimateWizard({ customers, services, preselectedCustomerId }
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {templates.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500 uppercase tracking-wide">Quick Start — Use a Template</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {templates.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => {
+                        const lines = tpl.lineItems.map((li: any) => `${li.description} x${li.quantity} @ $${li.unitPrice}`).join(", ");
+                        setAiInput(`Using template "${tpl.name}": ${lines}${tpl.notes ? `. Notes: ${tpl.notes}` : ""}`);
+                      }}
+                      className="text-left p-3 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                    >
+                      <p className="font-medium text-sm text-slate-800">{tpl.name}</p>
+                      {tpl.description && <p className="text-xs text-slate-500 mt-0.5 truncate">{tpl.description}</p>}
+                      <p className="text-xs text-slate-400 mt-1">{tpl.lineItems.length} line item{tpl.lineItems.length !== 1 ? "s" : ""}</p>
+                    </button>
+                  ))}
+                </div>
+                <Separator />
+              </div>
+            )}
+
             <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600 border border-slate-200">
               <p className="font-medium mb-2">Example:</p>
               <p className="italic">
