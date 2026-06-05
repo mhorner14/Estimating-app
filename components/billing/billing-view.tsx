@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Zap, Crown, Building2, AlertCircle } from "lucide-react";
+import { CheckCircle, Zap, Crown, Building2, AlertCircle, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface Plan {
@@ -92,6 +93,21 @@ export function BillingView({
   const isNearLimit = limit !== Infinity && usage.monthlyEstimates >= limit * 0.8;
 
   const currentPlan = PLANS.find((p) => p.id === plan);
+  const [openingPortal, setOpeningPortal] = useState(false);
+
+  async function openBillingPortal() {
+    setOpeningPortal(true);
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert("Unable to open billing portal. Please contact support.");
+    } catch {
+      alert("Unable to open billing portal. Please contact support.");
+    } finally {
+      setOpeningPortal(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -209,11 +225,10 @@ export function BillingView({
               </div>
               <Button
                 variant="outline"
-                onClick={() => {
-                  // In production: redirect to Stripe Customer Portal
-                  alert("Redirecting to billing portal...");
-                }}
+                onClick={openBillingPortal}
+                disabled={openingPortal}
               >
+                {openingPortal ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Manage Billing
               </Button>
             </div>
