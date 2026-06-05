@@ -107,6 +107,7 @@ model Company {
   googleReviewUrl     String?
   yelpReviewUrl       String?
   webhookUrl          String?
+  estimatePrefix      String   @default("EST")
   plan                String   @default("FREE") // FREE, STARTER, PRO, ENTERPRISE
   stripeCustomerId    String?
   stripeSubscriptionId String?

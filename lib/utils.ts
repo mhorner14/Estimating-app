@@ -21,13 +21,13 @@ export function formatDate(date: Date | string): string {
   }).format(new Date(date));
 }
 
-export function generateEstimateNumber(): string {
+export function generateEstimateNumber(prefix = "EST"): string {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
   const random = Math.floor(Math.random() * 9000 + 1000);
-  return `EST-${year}${month}${day}-${random}`;
+  return `${prefix}-${year}${month}${day}-${random}`;
 }
 
 export function calculateEstimateTotals(

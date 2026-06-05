@@ -34,6 +34,7 @@ export function CompanySettings({ company }: Props) {
     googleReviewUrl: (company as any)?.googleReviewUrl || "",
     yelpReviewUrl: (company as any)?.yelpReviewUrl || "",
     webhookUrl: (company as any)?.webhookUrl || "",
+    estimatePrefix: (company as any)?.estimatePrefix || "EST",
     insuranceInfo: company?.insuranceInfo || "",
     defaultTerms: company?.defaultTerms || "",
     defaultPaymentTerms: company?.defaultPaymentTerms || "",
@@ -213,6 +214,13 @@ export function CompanySettings({ company }: Props) {
                 <Label>Webhook URL (Zapier / Make)</Label>
                 <Input name="webhookUrl" value={form.webhookUrl} onChange={handleChange} placeholder="https://hooks.zapier.com/hooks/catch/..." />
                 <p className="text-xs text-slate-400">Fires a POST request with proposal data when a customer accepts a proposal.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Estimate Number Prefix</Label>
+                <div className="flex items-center gap-2">
+                  <Input name="estimatePrefix" value={form.estimatePrefix} onChange={handleChange} placeholder="EST" className="w-28" />
+                  <span className="text-sm text-slate-400">e.g. {form.estimatePrefix || "EST"}-241231-1234</span>
+                </div>
               </div>
             </div>
           </CardContent>

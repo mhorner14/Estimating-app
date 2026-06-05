@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
         companyId,
         projectId: project.id,
         createdById: userId,
-        estimateNumber: generateEstimateNumber(),
+        estimateNumber: generateEstimateNumber((company as any)?.estimatePrefix || "EST"),
         status: data.aiResult?.isComplete ? "READY_FOR_REVIEW" : "NEEDS_CLARIFICATION",
         squareFootage: parsedData.squareFootage as number | undefined,
         linearFootage: parsedData.linearFootage as number | undefined,
