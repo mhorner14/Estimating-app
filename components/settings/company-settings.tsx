@@ -35,6 +35,7 @@ export function CompanySettings({ company }: Props) {
     yelpReviewUrl: (company as any)?.yelpReviewUrl || "",
     webhookUrl: (company as any)?.webhookUrl || "",
     estimatePrefix: (company as any)?.estimatePrefix || "EST",
+    accentColor: company?.accentColor || "#2563eb",
     insuranceInfo: company?.insuranceInfo || "",
     defaultTerms: company?.defaultTerms || "",
     defaultPaymentTerms: company?.defaultPaymentTerms || "",
@@ -220,6 +221,20 @@ export function CompanySettings({ company }: Props) {
                 <div className="flex items-center gap-2">
                   <Input name="estimatePrefix" value={form.estimatePrefix} onChange={handleChange} placeholder="EST" className="w-28" />
                   <span className="text-sm text-slate-400">e.g. {form.estimatePrefix || "EST"}-241231-1234</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Proposal Accent Color</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    name="accentColor"
+                    value={form.accentColor}
+                    onChange={handleChange}
+                    className="w-10 h-10 rounded cursor-pointer border border-slate-200"
+                  />
+                  <Input name="accentColor" value={form.accentColor} onChange={handleChange} placeholder="#2563eb" className="w-32 font-mono text-sm" />
+                  <span className="text-xs text-slate-400">Used on proposals and customer portal</span>
                 </div>
               </div>
             </div>

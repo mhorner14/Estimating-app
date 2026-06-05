@@ -199,7 +199,7 @@ export function CustomerProposalView({ proposal }: CustomerProposalViewProps) {
         </div>
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           {/* Header */}
-          <div className="bg-slate-900 text-white p-8">
+          <div className="text-white p-8" style={{ backgroundColor: company?.accentColor || "#0f172a" }}>
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-4">

@@ -40,6 +40,7 @@ export async function PATCH(req: NextRequest) {
       ...(body.yelpReviewUrl !== undefined && { yelpReviewUrl: body.yelpReviewUrl || null }),
       ...(body.webhookUrl !== undefined && { webhookUrl: body.webhookUrl || null }),
       ...(body.estimatePrefix !== undefined && { estimatePrefix: body.estimatePrefix || "EST" }),
+      ...(body.accentColor !== undefined && { accentColor: body.accentColor || "#2563eb" }),
     },
   });
 
